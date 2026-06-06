@@ -1,15 +1,13 @@
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
 
 local Library = {}
-local CoreGui = game:GetService("CoreGui") -- Замени на PlayerGui, если это обычный плейс, а не скрипт-инжект
 
--- Настройки анимаций
-local TWEEN_INFO_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local TWEEN_INFO_SMOOTH = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local TWEEN_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local TWEEN_SMOOTH = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
--- Вспомогательная функция для переливающегося волнистого текста
+-- Генератор волнистого текста
 local function CreateWavyText(parent, textStr)
 	local container = Instance.new("Frame")
 	container.Size = UDim2.new(1, 0, 1, 0)
@@ -18,7 +16,6 @@ local function CreateWavyText(parent, textStr)
 
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.Parent = container
 
@@ -29,16 +26,15 @@ local function CreateWavyText(parent, textStr)
 		letter.Text = char
 		letter.Size = UDim2.new(0, 14, 1, 0)
 		letter.BackgroundTransparency = 1
-		letter.Font = Enum.Font.Code -- Олдскульный шрифт
+		letter.Font = Enum.Font.Code
 		letter.TextColor3 = Color3.fromRGB(255, 255, 255)
 		letter.TextSize = 18
 		letter.Parent = container
 
-		-- Добавляем блеск (UIGradient)
 		local gradient = Instance.new("UIGradient")
 		gradient.Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)), -- Оранжевый блеск
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)),
 			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
 		})
 		gradient.Rotation = 45
@@ -47,184 +43,202 @@ local function CreateWavyText(parent, textStr)
 		table.insert(letters, {Label = letter, Gradient = gradient, Index = i})
 	end
 
-	-- Анимация волны и блеска
 	RunService.RenderStepped:Connect(function()
 		local timeNow = tick()
 		for _, data in ipairs(letters) do
-			-- Волна: прыжок по оси Y
-			local waveY = math.sin(timeNow * 4 + data.Index * 0.5) * 3
-			data.Label.Position = UDim2.new(0, 0, 0, waveY)
-			
-			-- Перелив блеска
-			local offset = math.sin(timeNow * 2 + data.Index * 0.2)
-			data.Gradient.Offset = Vector2.new(offset, 0)
+			data.Label.Position = UDim2.new(0, 0, 0, math.sin(timeNow * 4 + data.Index * 0.5) * 3)
+			data.Gradient.Offset = Vector2.new(math.sin(timeNow * 2 + data.Index * 0.2), 0)
 		end
 	end)
 end
 
-function Library:CreateWindow()
+function Library:CreateWindow(options)
 	local WindowConfig = {}
-	
-	local ScreenGui = Instance.new("ScreenGui")
-	ScreenGui.Name = "FlippersSpawner"
-	ScreenGui.ResetOnSpawn = false
-	ScreenGui.Parent = CoreGui -- или Players.LocalPlayer:WaitForChild("PlayerGui")
+	options = options or {}
+	local titleText = options.Title or "Flipper's Spawner"
+	local loadIconId = options.Icon or "rbxassetid://3926305904" -- Дефолтная иконка
 
-	-- Главный фрейм (изначально квадратик)
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Name = "OldSchoolLib"
+	ScreenGui.ResetOnSpawn = false
+	pcall(function() ScreenGui.Parent = CoreGui end)
+	if not ScreenGui.Parent then ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") end
+
+	-- 1. ЗАГРУЗОЧНЫЙ ЭКРАН (Квадрат)
 	local MainFrame = Instance.new("Frame")
-	MainFrame.Size = UDim2.new(0, 50, 0, 50)
-	MainFrame.Position = UDim2.new(0.5, -25, 0.5, -25)
-	MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35) -- Темный олдскул фон
+	MainFrame.Size = UDim2.new(0, 100, 0, 100)
+	MainFrame.Position = UDim2.new(0.5, -50, 0.5, -50)
+	MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	MainFrame.BorderSizePixel = 0
 	MainFrame.ClipsDescendants = true
 	MainFrame.Parent = ScreenGui
+	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 
-	-- Скругление
-	local UICorner = Instance.new("UICorner")
-	UICorner.CornerRadius = UDim.new(0, 6)
-	UICorner.Parent = MainFrame
+	local LoadingIcon = Instance.new("ImageLabel")
+	LoadingIcon.Size = UDim2.new(0, 50, 0, 50)
+	LoadingIcon.Position = UDim2.new(0.5, -25, 0.5, -25)
+	LoadingIcon.BackgroundTransparency = 1
+	LoadingIcon.Image = loadIconId
+	LoadingIcon.ImageRectOffset = Vector2.new(964, 324) -- Настройка под Lucide
+	LoadingIcon.ImageRectSize = Vector2.new(36, 36)
+	LoadingIcon.ImageColor3 = Color3.fromRGB(255, 170, 0)
+	LoadingIcon.Parent = MainFrame
 
-	-- Стартовая анимация: развертывание в прямоугольник
+	-- Анимация загрузки
+	local spin = TweenService:Create(LoadingIcon, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
+	spin:Play()
+	task.wait(1.5) -- Имитация загрузки
+
+	-- Плавное затухание иконки
+	spin:Cancel()
+	TweenService:Create(LoadingIcon, TWEEN_FAST, {ImageTransparency = 1, Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
 	task.wait(0.2)
-	local expandTween = TweenService:Create(MainFrame, TWEEN_INFO_SMOOTH, {
-		Size = UDim2.new(0, 700, 0, 450),
-		Position = UDim2.new(0.5, -350, 0.5, -225)
+
+	-- 2. РАСШИРЕНИЕ ДО ПРЯМОУГОЛЬНИКА
+	local expandTween = TweenService:Create(MainFrame, TWEEN_SMOOTH, {
+		Size = UDim2.new(0, 750, 0, 450),
+		Position = UDim2.new(0.5, -375, 0.5, -225)
 	})
 	expandTween:Play()
 	expandTween.Completed:Wait()
 
-	-- Хедер
+	-- 3. ПОСТРОЕНИЕ ИНТЕРФЕЙСА (Хедер)
 	local Header = Instance.new("Frame")
 	Header.Size = UDim2.new(1, 0, 0, 40)
 	Header.BackgroundTransparency = 1
 	Header.Parent = MainFrame
 
-	-- Волнистый текст хедера
 	local TitleContainer = Instance.new("Frame")
-	TitleContainer.Size = UDim2.new(0, 200, 1, 0)
-	TitleContainer.Position = UDim2.new(0, 10, 0, 0)
+	TitleContainer.Size = UDim2.new(0, 300, 1, 0)
+	TitleContainer.Position = UDim2.new(0, 15, 0, 0)
 	TitleContainer.BackgroundTransparency = 1
 	TitleContainer.Parent = Header
-	CreateWavyText(TitleContainer, "Flipper's Spawner")
+	CreateWavyText(TitleContainer, titleText)
 
-	-- Кнопки управления (Mac style)
+	-- Кнопки Mac-style
 	local Controls = Instance.new("Frame")
 	Controls.Size = UDim2.new(0, 60, 1, 0)
-	Controls.Position = UDim2.new(1, -70, 0, 0)
+	Controls.Position = UDim2.new(1, -60, 0, 0)
 	Controls.BackgroundTransparency = 1
 	Controls.Parent = Header
 
-	local MinimizeBtn = Instance.new("TextButton")
-	MinimizeBtn.Size = UDim2.new(0, 16, 0, 16)
-	MinimizeBtn.Position = UDim2.new(0, 0, 0.5, -8)
-	MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0) -- Оранжевая
-	MinimizeBtn.Text = ""
-	Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(1, 0)
-	MinimizeBtn.Parent = Controls
+	local MinBtn = Instance.new("TextButton", Controls)
+	MinBtn.Size = UDim2.new(0, 14, 0, 14)
+	MinBtn.Position = UDim2.new(0, 0, 0.5, -7)
+	MinBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+	MinBtn.Text = ""
+	Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
 
-	local CloseBtn = Instance.new("TextButton")
-	CloseBtn.Size = UDim2.new(0, 16, 0, 16)
-	CloseBtn.Position = UDim2.new(0, 25, 0.5, -8)
-	CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60) -- Красная
+	local CloseBtn = Instance.new("TextButton", Controls)
+	CloseBtn.Size = UDim2.new(0, 14, 0, 14)
+	CloseBtn.Position = UDim2.new(0, 22, 0.5, -7)
+	CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 	CloseBtn.Text = ""
 	Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
-	CloseBtn.Parent = Controls
 
-	CloseBtn.MouseButton1Click:Connect(function()
-		ScreenGui:Destroy()
-	end)
+	CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
-	-- Оранжевая линия разделителя с градиентом
-	local Separator = Instance.new("Frame")
+	local Separator = Instance.new("Frame", Header)
 	Separator.Size = UDim2.new(1, 0, 0, 2)
 	Separator.Position = UDim2.new(0, 0, 1, 0)
 	Separator.BorderSizePixel = 0
-	Separator.Parent = Header
-	
-	local SepGradient = Instance.new("UIGradient")
+	local SepGradient = Instance.new("UIGradient", Separator)
 	SepGradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 0)),
 		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)),
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))
 	})
-	SepGradient.Parent = Separator
 
-	-- Боковая панель (Слева)
-	local Sidebar = Instance.new("Frame")
-	Sidebar.Size = UDim2.new(0, 150, 1, -42)
+	-- 4. ПАНЕЛИ (Слева, Центр, Справа)
+	local Sidebar = Instance.new("Frame", MainFrame)
+	Sidebar.Size = UDim2.new(0, 130, 1, -42)
 	Sidebar.Position = UDim2.new(0, 0, 0, 42)
-	Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 	Sidebar.BorderSizePixel = 0
-	Sidebar.Parent = MainFrame
 
-	-- Контейнер контента
-	local ContentContainer = Instance.new("Frame")
-	ContentContainer.Size = UDim2.new(1, -150, 1, -42)
-	ContentContainer.Position = UDim2.new(0, 150, 0, 42)
-	ContentContainer.BackgroundTransparency = 1
-	ContentContainer.Parent = MainFrame
+	local PropertiesPanel = Instance.new("Frame", MainFrame)
+	PropertiesPanel.Size = UDim2.new(0, 180, 1, -42)
+	PropertiesPanel.Position = UDim2.new(1, -180, 0, 42)
+	PropertiesPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+	PropertiesPanel.BorderSizePixel = 0
 
-	-- Explorer (Справа)
-	local ExplorerPanel = Instance.new("Frame")
-	ExplorerPanel.Size = UDim2.new(0, 200, 1, 0)
-	ExplorerPanel.Position = UDim2.new(1, -200, 0, 0)
-	ExplorerPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-	ExplorerPanel.BorderSizePixel = 0
-	ExplorerPanel.Parent = ContentContainer
+	local PropTitle = Instance.new("TextLabel", PropertiesPanel)
+	PropTitle.Size = UDim2.new(1, 0, 0, 30)
+	PropTitle.Position = UDim2.new(0, 10, 0, 0)
+	PropTitle.BackgroundTransparency = 1
+	PropTitle.Text = "/properties"
+	PropTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
+	PropTitle.Font = Enum.Font.Code
+	PropTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-	local ExpTitle = Instance.new("TextLabel")
-	ExpTitle.Size = UDim2.new(1, 0, 0, 30)
-	ExpTitle.BackgroundTransparency = 1
-	ExpTitle.Text = "/properties"
-	ExpTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
-	ExpTitle.Font = Enum.Font.Code
-	ExpTitle.Parent = ExplorerPanel
+	-- Контейнер с сеткой петов (Центр)
+	local ContentScroll = Instance.new("ScrollingFrame", MainFrame)
+	ContentScroll.Size = UDim2.new(1, -310, 1, -42) -- Отнимаем ширину левой(130) и правой(180) панелей
+	ContentScroll.Position = UDim2.new(0, 130, 0, 42)
+	ContentScroll.BackgroundTransparency = 1
+	ContentScroll.ScrollBarThickness = 2
+	ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 170, 0)
+	ContentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Нативный авто-скролл
+	ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 
-	-- Метод для создания вкладки Main с сеткой петов
-	function WindowConfig:CreateItem(name)
-		-- Карточка пета
+	local GridLayout = Instance.new("UIGridLayout", ContentScroll)
+	GridLayout.CellSize = UDim2.new(0, 95, 0, 115)
+	GridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+	GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	local UIPadding = Instance.new("UIPadding", ContentScroll)
+	UIPadding.PaddingTop = UDim.new(0, 15)
+	UIPadding.PaddingLeft = UDim.new(0, 15)
+	UIPadding.PaddingRight = UDim.new(0, 15)
+	UIPadding.PaddingBottom = UDim.new(0, 15)
+
+	-- 5. ФУНКЦИЯ СОЗДАНИЯ КАРТОЧКИ ПЕТА
+	function WindowConfig:CreateItem(name, imageId)
 		local Card = Instance.new("TextButton")
-        Card.Text = ""
-        Card.AutoButtonColor = false
-		Card.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-		Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 4)
+		Card.Name = name
+		Card.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+		Card.Text = ""
+		Card.AutoButtonColor = false
+		Card.Parent = ContentScroll
+		Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 6)
 
-		local UIScale = Instance.new("UIScale")
-		UIScale.Parent = Card
+		local UIScale = Instance.new("UIScale", Card)
 
-		-- Тонкая линия сверху
-		local TopLine = Instance.new("Frame")
+		local TopLine = Instance.new("Frame", Card)
 		TopLine.Size = UDim2.new(1, 0, 0, 2)
 		TopLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 		TopLine.BorderSizePixel = 0
-		TopLine.Parent = Card
-
-		local LineGradient = Instance.new("UIGradient")
-		LineGradient.Color = ColorSequence.new({
+		local LineGrad = Instance.new("UIGradient", TopLine)
+		LineGrad.Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 170, 0)),
 			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 80, 0))
 		})
-		LineGradient.Parent = TopLine
 
-		local ItemName = Instance.new("TextLabel")
-		ItemName.Size = UDim2.new(1, 0, 0, 20)
-		ItemName.Position = UDim2.new(0, 0, 1, -25)
-		ItemName.BackgroundTransparency = 1
-		ItemName.Text = name
-		ItemName.TextColor3 = Color3.fromRGB(200, 200, 200)
-		ItemName.Font = Enum.Font.Code
-		ItemName.Parent = Card
+		local PetImage = Instance.new("ImageLabel", Card)
+		PetImage.Size = UDim2.new(0.8, 0, 0.6, 0)
+		PetImage.Position = UDim2.new(0.1, 0, 0.1, 0)
+		PetImage.BackgroundTransparency = 1
+		PetImage.ScaleType = Enum.ScaleType.Fit
+		PetImage.Image = imageId or ""
+
+		local PetName = Instance.new("TextLabel", Card)
+		PetName.Size = UDim2.new(1, -10, 0, 20)
+		PetName.Position = UDim2.new(0, 5, 1, -25)
+		PetName.BackgroundTransparency = 1
+		PetName.Text = name
+		PetName.TextColor3 = Color3.fromRGB(200, 200, 200)
+		PetName.Font = Enum.Font.Code
+		PetName.TextSize = 12
+		PetName.TextTruncate = Enum.TextTruncate.AtEnd
 
 		-- Анимации наведения
 		Card.MouseEnter:Connect(function()
-			TweenService:Create(UIScale, TWEEN_INFO_FAST, {Scale = 1.05}):Play()
-			-- Запуск бегущей волны по линии
-			TweenService:Create(LineGradient, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Offset = Vector2.new(1, 0)}):Play()
+			TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.05}):Play()
+			Card.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
 		end)
-
 		Card.MouseLeave:Connect(function()
-			TweenService:Create(UIScale, TWEEN_INFO_FAST, {Scale = 1}):Play()
-			LineGradient.Offset = Vector2.new(0, 0) -- Сброс
+			TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.0}):Play()
+			Card.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 		end)
 
 		return Card
