@@ -1,0 +1,236 @@
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local Library = {}
+local CoreGui = game:GetService("CoreGui") -- Замени на PlayerGui, если это обычный плейс, а не скрипт-инжект
+
+-- Настройки анимаций
+local TWEEN_INFO_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local TWEEN_INFO_SMOOTH = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+
+-- Вспомогательная функция для переливающегося волнистого текста
+local function CreateWavyText(parent, textStr)
+	local container = Instance.new("Frame")
+	container.Size = UDim2.new(1, 0, 1, 0)
+	container.BackgroundTransparency = 1
+	container.Parent = parent
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.Parent = container
+
+	local letters = {}
+	for i = 1, #textStr do
+		local char = textStr:sub(i, i)
+		local letter = Instance.new("TextLabel")
+		letter.Text = char
+		letter.Size = UDim2.new(0, 14, 1, 0)
+		letter.BackgroundTransparency = 1
+		letter.Font = Enum.Font.Code -- Олдскульный шрифт
+		letter.TextColor3 = Color3.fromRGB(255, 255, 255)
+		letter.TextSize = 18
+		letter.Parent = container
+
+		-- Добавляем блеск (UIGradient)
+		local gradient = Instance.new("UIGradient")
+		gradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)), -- Оранжевый блеск
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+		})
+		gradient.Rotation = 45
+		gradient.Parent = letter
+
+		table.insert(letters, {Label = letter, Gradient = gradient, Index = i})
+	end
+
+	-- Анимация волны и блеска
+	RunService.RenderStepped:Connect(function()
+		local timeNow = tick()
+		for _, data in ipairs(letters) do
+			-- Волна: прыжок по оси Y
+			local waveY = math.sin(timeNow * 4 + data.Index * 0.5) * 3
+			data.Label.Position = UDim2.new(0, 0, 0, waveY)
+			
+			-- Перелив блеска
+			local offset = math.sin(timeNow * 2 + data.Index * 0.2)
+			data.Gradient.Offset = Vector2.new(offset, 0)
+		end
+	end)
+end
+
+function Library:CreateWindow()
+	local WindowConfig = {}
+	
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Name = "FlippersSpawner"
+	ScreenGui.ResetOnSpawn = false
+	ScreenGui.Parent = CoreGui -- или Players.LocalPlayer:WaitForChild("PlayerGui")
+
+	-- Главный фрейм (изначально квадратик)
+	local MainFrame = Instance.new("Frame")
+	MainFrame.Size = UDim2.new(0, 50, 0, 50)
+	MainFrame.Position = UDim2.new(0.5, -25, 0.5, -25)
+	MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35) -- Темный олдскул фон
+	MainFrame.BorderSizePixel = 0
+	MainFrame.ClipsDescendants = true
+	MainFrame.Parent = ScreenGui
+
+	-- Скругление
+	local UICorner = Instance.new("UICorner")
+	UICorner.CornerRadius = UDim.new(0, 6)
+	UICorner.Parent = MainFrame
+
+	-- Стартовая анимация: развертывание в прямоугольник
+	task.wait(0.2)
+	local expandTween = TweenService:Create(MainFrame, TWEEN_INFO_SMOOTH, {
+		Size = UDim2.new(0, 700, 0, 450),
+		Position = UDim2.new(0.5, -350, 0.5, -225)
+	})
+	expandTween:Play()
+	expandTween.Completed:Wait()
+
+	-- Хедер
+	local Header = Instance.new("Frame")
+	Header.Size = UDim2.new(1, 0, 0, 40)
+	Header.BackgroundTransparency = 1
+	Header.Parent = MainFrame
+
+	-- Волнистый текст хедера
+	local TitleContainer = Instance.new("Frame")
+	TitleContainer.Size = UDim2.new(0, 200, 1, 0)
+	TitleContainer.Position = UDim2.new(0, 10, 0, 0)
+	TitleContainer.BackgroundTransparency = 1
+	TitleContainer.Parent = Header
+	CreateWavyText(TitleContainer, "Flipper's Spawner")
+
+	-- Кнопки управления (Mac style)
+	local Controls = Instance.new("Frame")
+	Controls.Size = UDim2.new(0, 60, 1, 0)
+	Controls.Position = UDim2.new(1, -70, 0, 0)
+	Controls.BackgroundTransparency = 1
+	Controls.Parent = Header
+
+	local MinimizeBtn = Instance.new("TextButton")
+	MinimizeBtn.Size = UDim2.new(0, 16, 0, 16)
+	MinimizeBtn.Position = UDim2.new(0, 0, 0.5, -8)
+	MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0) -- Оранжевая
+	MinimizeBtn.Text = ""
+	Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(1, 0)
+	MinimizeBtn.Parent = Controls
+
+	local CloseBtn = Instance.new("TextButton")
+	CloseBtn.Size = UDim2.new(0, 16, 0, 16)
+	CloseBtn.Position = UDim2.new(0, 25, 0.5, -8)
+	CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60) -- Красная
+	CloseBtn.Text = ""
+	Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
+	CloseBtn.Parent = Controls
+
+	CloseBtn.MouseButton1Click:Connect(function()
+		ScreenGui:Destroy()
+	end)
+
+	-- Оранжевая линия разделителя с градиентом
+	local Separator = Instance.new("Frame")
+	Separator.Size = UDim2.new(1, 0, 0, 2)
+	Separator.Position = UDim2.new(0, 0, 1, 0)
+	Separator.BorderSizePixel = 0
+	Separator.Parent = Header
+	
+	local SepGradient = Instance.new("UIGradient")
+	SepGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 0)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))
+	})
+	SepGradient.Parent = Separator
+
+	-- Боковая панель (Слева)
+	local Sidebar = Instance.new("Frame")
+	Sidebar.Size = UDim2.new(0, 150, 1, -42)
+	Sidebar.Position = UDim2.new(0, 0, 0, 42)
+	Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	Sidebar.BorderSizePixel = 0
+	Sidebar.Parent = MainFrame
+
+	-- Контейнер контента
+	local ContentContainer = Instance.new("Frame")
+	ContentContainer.Size = UDim2.new(1, -150, 1, -42)
+	ContentContainer.Position = UDim2.new(0, 150, 0, 42)
+	ContentContainer.BackgroundTransparency = 1
+	ContentContainer.Parent = MainFrame
+
+	-- Explorer (Справа)
+	local ExplorerPanel = Instance.new("Frame")
+	ExplorerPanel.Size = UDim2.new(0, 200, 1, 0)
+	ExplorerPanel.Position = UDim2.new(1, -200, 0, 0)
+	ExplorerPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	ExplorerPanel.BorderSizePixel = 0
+	ExplorerPanel.Parent = ContentContainer
+
+	local ExpTitle = Instance.new("TextLabel")
+	ExpTitle.Size = UDim2.new(1, 0, 0, 30)
+	ExpTitle.BackgroundTransparency = 1
+	ExpTitle.Text = "/properties"
+	ExpTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
+	ExpTitle.Font = Enum.Font.Code
+	ExpTitle.Parent = ExplorerPanel
+
+	-- Метод для создания вкладки Main с сеткой петов
+	function WindowConfig:CreateItem(name)
+		-- Карточка пета
+		local Card = Instance.new("TextButton")
+        Card.Text = ""
+        Card.AutoButtonColor = false
+		Card.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 4)
+
+		local UIScale = Instance.new("UIScale")
+		UIScale.Parent = Card
+
+		-- Тонкая линия сверху
+		local TopLine = Instance.new("Frame")
+		TopLine.Size = UDim2.new(1, 0, 0, 2)
+		TopLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		TopLine.BorderSizePixel = 0
+		TopLine.Parent = Card
+
+		local LineGradient = Instance.new("UIGradient")
+		LineGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 170, 0)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 80, 0))
+		})
+		LineGradient.Parent = TopLine
+
+		local ItemName = Instance.new("TextLabel")
+		ItemName.Size = UDim2.new(1, 0, 0, 20)
+		ItemName.Position = UDim2.new(0, 0, 1, -25)
+		ItemName.BackgroundTransparency = 1
+		ItemName.Text = name
+		ItemName.TextColor3 = Color3.fromRGB(200, 200, 200)
+		ItemName.Font = Enum.Font.Code
+		ItemName.Parent = Card
+
+		-- Анимации наведения
+		Card.MouseEnter:Connect(function()
+			TweenService:Create(UIScale, TWEEN_INFO_FAST, {Scale = 1.05}):Play()
+			-- Запуск бегущей волны по линии
+			TweenService:Create(LineGradient, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Offset = Vector2.new(1, 0)}):Play()
+		end)
+
+		Card.MouseLeave:Connect(function()
+			TweenService:Create(UIScale, TWEEN_INFO_FAST, {Scale = 1}):Play()
+			LineGradient.Offset = Vector2.new(0, 0) -- Сброс
+		end)
+
+		return Card
+	end
+
+	return WindowConfig
+end
+
+return Library
