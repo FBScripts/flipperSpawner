@@ -8,7 +8,7 @@ local Library = {}
 local TWEEN_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local TWEEN_SMOOTH = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
--- Переливающийся текст
+-- Переливающийся текст (волна)
 local function CreateWavyText(parent, textStr)
 	local container = Instance.new("Frame", parent)
 	container.Size = UDim2.new(1, 0, 1, 0)
@@ -17,6 +17,7 @@ local function CreateWavyText(parent, textStr)
 	local layout = Instance.new("UIListLayout", container)
 	layout.FillDirection = Enum.FillDirection.Horizontal
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 
 	local letters = {}
@@ -63,31 +64,25 @@ function Library:CreateWindow(options)
 	pcall(function() ScreenGui.Parent = CoreGui end)
 	if not ScreenGui.Parent then ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-	-- Свернутый режим (TextLabel + Кнопка)
-	local MinimizedArea = Instance.new("Frame", ScreenGui)
-	MinimizedArea.Size = UDim2.new(0, 300, 0, 30)
-	MinimizedArea.Position = UDim2.new(0.5, -150, 0, 10)
-	MinimizedArea.BackgroundTransparency = 1
-	MinimizedArea.Visible = false
+	-- WATERMARK: Метка легитности сверху экрана (TextLabel, без кнопок)
+	local WatermarkContainer = Instance.new("Frame", ScreenGui)
+	WatermarkContainer.Size = UDim2.new(0, 300, 0, 30)
+	WatermarkContainer.Position = UDim2.new(0.5, -150, 0, 5)
+	WatermarkContainer.BackgroundTransparency = 1
+	CreateWavyText(WatermarkContainer, titleText)
 
-	local MinText = Instance.new("TextLabel", MinimizedArea)
-	MinText.Size = UDim2.new(1, -40, 1, 0)
-	MinText.BackgroundTransparency = 1
-	MinText.Font = Enum.Font.Code
-	MinText.Text = titleText
-	MinText.TextColor3 = Color3.fromRGB(255, 170, 0)
-	MinText.TextSize = 16
-	MinText.TextXAlignment = Enum.TextXAlignment.Center
-
-	local OpenBtn = Instance.new("TextButton", MinimizedArea)
-	OpenBtn.Size = UDim2.new(0, 30, 0, 30)
-	OpenBtn.Position = UDim2.new(1, -30, 0, 0)
+	-- Отдельная кнопка открытия UI (Сбоку)
+	local OpenBtn = Instance.new("TextButton", ScreenGui)
+	OpenBtn.Size = UDim2.new(0, 36, 0, 36)
+	OpenBtn.Position = UDim2.new(1, -50, 0.5, -18)
 	OpenBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 	OpenBtn.Text = "+"
 	OpenBtn.TextColor3 = Color3.fromRGB(255, 170, 0)
 	OpenBtn.Font = Enum.Font.Code
-	OpenBtn.TextSize = 18
-	Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 6)
+	OpenBtn.TextSize = 24
+	OpenBtn.Visible = false
+	Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 8)
+	Instance.new("UIStroke", OpenBtn).Color = Color3.fromRGB(255, 170, 0)
 
 	-- Главное меню
 	local MainFrame = Instance.new("Frame", ScreenGui)
@@ -98,7 +93,7 @@ function Library:CreateWindow(options)
 	MainFrame.ClipsDescendants = true
 	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 
-	-- Анимация загрузки
+	-- Стартовая загрузка
 	local LoadIcon = Instance.new("ImageLabel", MainFrame)
 	LoadIcon.Size = UDim2.new(0, 40, 0, 40)
 	LoadIcon.Position = UDim2.new(0.5, -20, 0.5, -20)
@@ -115,7 +110,7 @@ function Library:CreateWindow(options)
 	TweenService:Create(LoadIcon, TWEEN_FAST, {ImageTransparency = 1, Size = UDim2.new(0,0,0,0), Position = UDim2.new(0.5,0,0.5,0)}):Play()
 	task.wait(0.2)
 
-	-- Раскрытие
+	-- Развертывание
 	local expandTw = TweenService:Create(MainFrame, TWEEN_SMOOTH, {
 		Size = UDim2.new(0, 750, 0, 450),
 		Position = UDim2.new(0.5, -375, 0.5, -225)
@@ -123,9 +118,9 @@ function Library:CreateWindow(options)
 	expandTw:Play()
 	expandTw.Completed:Wait()
 
-	-- Логика разворачивания
+	-- Логика разворачивания (Отдельная кнопка)
 	OpenBtn.MouseButton1Click:Connect(function()
-		MinimizedArea.Visible = false
+		OpenBtn.Visible = false
 		MainFrame.Visible = true
 		MainFrame.Size = UDim2.new(0, 750, 0, 0)
 		TweenService:Create(MainFrame, TWEEN_SMOOTH, {Size = UDim2.new(0, 750, 0, 450)}):Play()
@@ -137,11 +132,15 @@ function Library:CreateWindow(options)
 	Header.BackgroundTransparency = 1
 	Header.Active = true
 
-	local TitleContainer = Instance.new("Frame", Header)
-	TitleContainer.Size = UDim2.new(0, 300, 1, 0)
-	TitleContainer.Position = UDim2.new(0, 15, 0, 0)
-	TitleContainer.BackgroundTransparency = 1
-	CreateWavyText(TitleContainer, titleText)
+	local HeaderTitle = Instance.new("TextLabel", Header)
+	HeaderTitle.Size = UDim2.new(0, 300, 1, 0)
+	HeaderTitle.Position = UDim2.new(0, 15, 0, 0)
+	HeaderTitle.BackgroundTransparency = 1
+	HeaderTitle.Text = titleText
+	HeaderTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+	HeaderTitle.Font = Enum.Font.Code
+	HeaderTitle.TextSize = 14
+	HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 	-- Draggable
 	local dragging, dragInput, dragStart, startPos
@@ -163,6 +162,7 @@ function Library:CreateWindow(options)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 	end)
 
+	-- Кнопки управления окном
 	local Controls = Instance.new("Frame", Header)
 	Controls.Size = UDim2.new(0, 60, 1, 0)
 	Controls.Position = UDim2.new(1, -60, 0, 0)
@@ -187,7 +187,7 @@ function Library:CreateWindow(options)
 		tw:Play()
 		tw.Completed:Wait()
 		MainFrame.Visible = false
-		MinimizedArea.Visible = true
+		OpenBtn.Visible = true
 	end)
 
 	CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
@@ -232,7 +232,6 @@ function Library:CreateWindow(options)
 	local MainTabBtn, MainIcon = CreateIconTab("rbxassetid://6031094678", true)
 	local SettingsTabBtn, SetIcon = CreateIconTab("rbxassetid://6031075976", false)
 
-	-- Области контента
 	local MainTabArea = Instance.new("Frame", MainFrame)
 	MainTabArea.Size = UDim2.new(1, -50, 1, -42)
 	MainTabArea.Position = UDim2.new(0, 50, 0, 42)
@@ -244,7 +243,6 @@ function Library:CreateWindow(options)
 	SettingsTabArea.BackgroundTransparency = 1
 	SettingsTabArea.Visible = false
 
-	-- Переключение вкладок
 	MainTabBtn.MouseButton1Click:Connect(function()
 		MainIcon.ImageColor3 = Color3.fromRGB(255, 170, 0); SetIcon.ImageColor3 = Color3.fromRGB(150, 150, 150)
 		MainTabArea.Visible = true; SettingsTabArea.Visible = false
@@ -254,7 +252,6 @@ function Library:CreateWindow(options)
 		SettingsTabArea.Visible = true; MainTabArea.Visible = false
 	end)
 
-	-- Заглушка для Settings
 	local SetText = Instance.new("TextLabel", SettingsTabArea)
 	SetText.Size = UDim2.new(1, 0, 1, 0)
 	SetText.BackgroundTransparency = 1
@@ -262,7 +259,7 @@ function Library:CreateWindow(options)
 	SetText.TextColor3 = Color3.fromRGB(150, 150, 150)
 	SetText.Font = Enum.Font.Code
 
-	-- Центральная часть (Main Tab)
+	-- Центральная часть
 	local CenterArea = Instance.new("Frame", MainTabArea)
 	CenterArea.Size = UDim2.new(1, -220, 1, 0)
 	CenterArea.BackgroundTransparency = 1
@@ -316,12 +313,9 @@ function Library:CreateWindow(options)
 	PotionsFrame.Size = UDim2.new(1, -30, 0, 30)
 	PotionsFrame.Position = UDim2.new(0, 15, 0, 45)
 	PotionsFrame.BackgroundTransparency = 1
-
 	local PotionLayout = Instance.new("UIListLayout", PotionsFrame)
-	PotionLayout.FillDirection = Enum.FillDirection.Horizontal
-	PotionLayout.Padding = UDim.new(0, 5)
+	PotionLayout.FillDirection = Enum.FillDirection.Horizontal; PotionLayout.Padding = UDim.new(0, 5)
 
-	-- Референс на инпут Age, чтобы лочить его при 'M'
 	local AgeInputBox
 
 	local function CreatePotionBtn(name, key)
@@ -338,7 +332,6 @@ function Library:CreateWindow(options)
 			Btn.BackgroundColor3 = AppState[key] and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(35, 35, 40)
 			Btn.TextColor3 = AppState[key] and Color3.fromRGB(25, 25, 30) or Color3.fromRGB(150, 150, 150)
 			
-			-- Логика блока Age при M
 			if key == "M" and AgeInputBox then
 				if AppState.M then
 					AgeInputBox.Text = "6"
@@ -415,7 +408,6 @@ function Library:CreateWindow(options)
 		Card.AutoButtonColor = false
 		Card.Parent = ContentScroll
 		Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 6)
-
 		local UIScale = Instance.new("UIScale", Card)
 
 		local TopLine = Instance.new("Frame", Card)
