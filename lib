@@ -1,5 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
 local Library = {}
@@ -16,7 +17,9 @@ local function CreateWavyText(parent, textStr)
 
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- ФИКС: Текст теперь не выпирает
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.Padding = UDim.new(0, 1)
 	layout.Parent = container
 
 	local letters = {}
@@ -24,11 +27,11 @@ local function CreateWavyText(parent, textStr)
 		local char = textStr:sub(i, i)
 		local letter = Instance.new("TextLabel")
 		letter.Text = char
-		letter.Size = UDim2.new(0, 14, 1, 0)
+		letter.Size = UDim2.new(0, char == " " and 8 or 12, 1, 0)
 		letter.BackgroundTransparency = 1
 		letter.Font = Enum.Font.Code
 		letter.TextColor3 = Color3.fromRGB(255, 255, 255)
-		letter.TextSize = 18
+		letter.TextSize = 16
 		letter.Parent = container
 
 		local gradient = Instance.new("UIGradient")
@@ -56,7 +59,7 @@ function Library:CreateWindow(options)
 	local WindowConfig = {}
 	options = options or {}
 	local titleText = options.Title or "Flipper's Spawner"
-	local loadIconId = options.Icon or "rbxassetid://3926305904" -- Дефолтная иконка
+	local loadIconId = options.Icon or "rbxassetid://3926305904"
 
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "OldSchoolLib"
@@ -64,37 +67,38 @@ function Library:CreateWindow(options)
 	pcall(function() ScreenGui.Parent = CoreGui end)
 	if not ScreenGui.Parent then ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-	-- 1. ЗАГРУЗОЧНЫЙ ЭКРАН (Квадрат)
+	-- Главный фрейм
 	local MainFrame = Instance.new("Frame")
 	MainFrame.Size = UDim2.new(0, 100, 0, 100)
 	MainFrame.Position = UDim2.new(0.5, -50, 0.5, -50)
 	MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	MainFrame.BorderSizePixel = 0
-	MainFrame.ClipsDescendants = true
+	MainFrame.ClipsDescendants = true -- ФИКС: Скрывает вылеты при скруглении и сворачивании
 	MainFrame.Parent = ScreenGui
-	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+	
+	local MainCorner = Instance.new("UICorner")
+	MainCorner.CornerRadius = UDim.new(0, 8)
+	MainCorner.Parent = MainFrame
 
+	-- Иконка загрузки (по центру)
 	local LoadingIcon = Instance.new("ImageLabel")
-	LoadingIcon.Size = UDim2.new(0, 50, 0, 50)
-	LoadingIcon.Position = UDim2.new(0.5, -25, 0.5, -25)
+	LoadingIcon.Size = UDim2.new(0, 40, 0, 40)
+	LoadingIcon.Position = UDim2.new(0.5, -20, 0.5, -20)
 	LoadingIcon.BackgroundTransparency = 1
 	LoadingIcon.Image = loadIconId
-	LoadingIcon.ImageRectOffset = Vector2.new(964, 324) -- Настройка под Lucide
+	LoadingIcon.ImageRectOffset = Vector2.new(964, 324)
 	LoadingIcon.ImageRectSize = Vector2.new(36, 36)
 	LoadingIcon.ImageColor3 = Color3.fromRGB(255, 170, 0)
 	LoadingIcon.Parent = MainFrame
 
-	-- Анимация загрузки
 	local spin = TweenService:Create(LoadingIcon, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
 	spin:Play()
-	task.wait(1.5) -- Имитация загрузки
+	task.wait(1)
 
-	-- Плавное затухание иконки
 	spin:Cancel()
 	TweenService:Create(LoadingIcon, TWEEN_FAST, {ImageTransparency = 1, Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
 	task.wait(0.2)
 
-	-- 2. РАСШИРЕНИЕ ДО ПРЯМОУГОЛЬНИКА
 	local expandTween = TweenService:Create(MainFrame, TWEEN_SMOOTH, {
 		Size = UDim2.new(0, 750, 0, 450),
 		Position = UDim2.new(0.5, -375, 0.5, -225)
@@ -102,20 +106,55 @@ function Library:CreateWindow(options)
 	expandTween:Play()
 	expandTween.Completed:Wait()
 
-	-- 3. ПОСТРОЕНИЕ ИНТЕРФЕЙСА (Хедер)
+	-- Хедер
 	local Header = Instance.new("Frame")
 	Header.Size = UDim2.new(1, 0, 0, 40)
 	Header.BackgroundTransparency = 1
+	Header.Active = true
 	Header.Parent = MainFrame
+
+	-- ФИКС: Иконка в хедере
+	local HeaderIcon = Instance.new("ImageLabel")
+	HeaderIcon.Size = UDim2.new(0, 20, 0, 20)
+	HeaderIcon.Position = UDim2.new(0, 10, 0.5, -10)
+	HeaderIcon.BackgroundTransparency = 1
+	HeaderIcon.Image = loadIconId
+	HeaderIcon.ImageRectOffset = Vector2.new(964, 324)
+	HeaderIcon.ImageRectSize = Vector2.new(36, 36)
+	HeaderIcon.ImageColor3 = Color3.fromRGB(255, 170, 0)
+	HeaderIcon.Parent = Header
 
 	local TitleContainer = Instance.new("Frame")
 	TitleContainer.Size = UDim2.new(0, 300, 1, 0)
-	TitleContainer.Position = UDim2.new(0, 15, 0, 0)
+	TitleContainer.Position = UDim2.new(0, 40, 0, 0)
 	TitleContainer.BackgroundTransparency = 1
 	TitleContainer.Parent = Header
 	CreateWavyText(TitleContainer, titleText)
 
-	-- Кнопки Mac-style
+	-- ФИКС: DRAGGABLE
+	local dragging, dragInput, dragStart, startPos
+	Header.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = MainFrame.Position
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+	RunService.RenderStepped:Connect(function()
+		if dragging and dragInput then
+			local delta = dragInput.Position - dragStart
+			MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+	end)
+
 	local Controls = Instance.new("Frame")
 	Controls.Size = UDim2.new(0, 60, 1, 0)
 	Controls.Position = UDim2.new(1, -60, 0, 0)
@@ -136,6 +175,17 @@ function Library:CreateWindow(options)
 	CloseBtn.Text = ""
 	Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
 
+	-- ФИКС: Сворачивание
+	local isMinimized = false
+	MinBtn.MouseButton1Click:Connect(function()
+		isMinimized = not isMinimized
+		if isMinimized then
+			TweenService:Create(MainFrame, TWEEN_FAST, {Size = UDim2.new(0, 750, 0, 40)}):Play()
+		else
+			TweenService:Create(MainFrame, TWEEN_FAST, {Size = UDim2.new(0, 750, 0, 450)}):Play()
+		end
+	end)
+
 	CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
 	local Separator = Instance.new("Frame", Header)
@@ -149,12 +199,33 @@ function Library:CreateWindow(options)
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))
 	})
 
-	-- 4. ПАНЕЛИ (Слева, Центр, Справа)
+	-- Панели
 	local Sidebar = Instance.new("Frame", MainFrame)
 	Sidebar.Size = UDim2.new(0, 130, 1, -42)
 	Sidebar.Position = UDim2.new(0, 0, 0, 42)
 	Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 	Sidebar.BorderSizePixel = 0
+	
+	local SidebarLayout = Instance.new("UIListLayout", Sidebar)
+	SidebarLayout.Padding = UDim.new(0, 5)
+
+	local ContentScroll = Instance.new("ScrollingFrame", MainFrame)
+	ContentScroll.Size = UDim2.new(1, -310, 1, -42)
+	ContentScroll.Position = UDim2.new(0, 130, 0, 42)
+	ContentScroll.BackgroundTransparency = 1
+	ContentScroll.ScrollBarThickness = 2
+	ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 170, 0)
+	ContentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+
+	local GridLayout = Instance.new("UIGridLayout", ContentScroll)
+	GridLayout.CellSize = UDim2.new(0, 95, 0, 115)
+	GridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+	GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	local UIPadding = Instance.new("UIPadding", ContentScroll)
+	UIPadding.PaddingTop = UDim.new(0, 15)
+	UIPadding.PaddingLeft = UDim.new(0, 15)
 
 	local PropertiesPanel = Instance.new("Frame", MainFrame)
 	PropertiesPanel.Size = UDim2.new(0, 180, 1, -42)
@@ -171,28 +242,43 @@ function Library:CreateWindow(options)
 	PropTitle.Font = Enum.Font.Code
 	PropTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- Контейнер с сеткой петов (Центр)
-	local ContentScroll = Instance.new("ScrollingFrame", MainFrame)
-	ContentScroll.Size = UDim2.new(1, -310, 1, -42) -- Отнимаем ширину левой(130) и правой(180) панелей
-	ContentScroll.Position = UDim2.new(0, 130, 0, 42)
-	ContentScroll.BackgroundTransparency = 1
-	ContentScroll.ScrollBarThickness = 2
-	ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 170, 0)
-	ContentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Нативный авто-скролл
-	ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	-- ФИКС: Вкладки
+	local function CreateTab(name, isActive)
+		local TabBtn = Instance.new("TextButton", Sidebar)
+		TabBtn.Size = UDim2.new(1, 0, 0, 35)
+		TabBtn.BackgroundTransparency = isActive and 0 or 1
+		TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+		TabBtn.Text = "  " .. name
+		TabBtn.TextColor3 = isActive and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(150, 150, 150)
+		TabBtn.Font = Enum.Font.Code
+		TabBtn.TextXAlignment = Enum.TextXAlignment.Left
+		
+		-- Индикатор активной вкладки
+		local Indicator = Instance.new("Frame", TabBtn)
+		Indicator.Size = UDim2.new(0, 3, 1, 0)
+		Indicator.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+		Indicator.BorderSizePixel = 0
+		Indicator.Visible = isActive
+		
+		return TabBtn, Indicator
+	end
 
-	local GridLayout = Instance.new("UIGridLayout", ContentScroll)
-	GridLayout.CellSize = UDim2.new(0, 95, 0, 115)
-	GridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
-	GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	local MainTabBtn, MainInd = CreateTab("Main", true)
+	local SettingsTabBtn, SetInd = CreateTab("Settings", false)
 
-	local UIPadding = Instance.new("UIPadding", ContentScroll)
-	UIPadding.PaddingTop = UDim.new(0, 15)
-	UIPadding.PaddingLeft = UDim.new(0, 15)
-	UIPadding.PaddingRight = UDim.new(0, 15)
-	UIPadding.PaddingBottom = UDim.new(0, 15)
+	MainTabBtn.MouseButton1Click:Connect(function()
+		MainTabBtn.BackgroundTransparency = 0; MainTabBtn.TextColor3 = Color3.fromRGB(255, 170, 0); MainInd.Visible = true
+		SettingsTabBtn.BackgroundTransparency = 1; SettingsTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150); SetInd.Visible = false
+		ContentScroll.Visible = true
+	end)
 
-	-- 5. ФУНКЦИЯ СОЗДАНИЯ КАРТОЧКИ ПЕТА
+	SettingsTabBtn.MouseButton1Click:Connect(function()
+		SettingsTabBtn.BackgroundTransparency = 0; SettingsTabBtn.TextColor3 = Color3.fromRGB(255, 170, 0); SetInd.Visible = true
+		MainTabBtn.BackgroundTransparency = 1; MainTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150); MainInd.Visible = false
+		ContentScroll.Visible = false
+	end)
+
+	-- Создание карточки
 	function WindowConfig:CreateItem(name, imageId)
 		local Card = Instance.new("TextButton")
 		Card.Name = name
@@ -231,7 +317,6 @@ function Library:CreateWindow(options)
 		PetName.TextSize = 12
 		PetName.TextTruncate = Enum.TextTruncate.AtEnd
 
-		-- Анимации наведения
 		Card.MouseEnter:Connect(function()
 			TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.05}):Play()
 			Card.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
