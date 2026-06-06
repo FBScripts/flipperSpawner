@@ -6,144 +6,73 @@ local CoreGui = game:GetService("CoreGui")
 local Library = {}
 
 local TWEEN_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local TWEEN_SMOOTH = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-
--- Генератор волнистого текста
-local function CreateWavyText(parent, textStr)
-	local container = Instance.new("Frame")
-	container.Size = UDim2.new(1, 0, 1, 0)
-	container.BackgroundTransparency = 1
-	container.Parent = parent
-
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- ФИКС: Текст теперь не выпирает
-	layout.VerticalAlignment = Enum.VerticalAlignment.Center
-	layout.Padding = UDim.new(0, 1)
-	layout.Parent = container
-
-	local letters = {}
-	for i = 1, #textStr do
-		local char = textStr:sub(i, i)
-		local letter = Instance.new("TextLabel")
-		letter.Text = char
-		letter.Size = UDim2.new(0, char == " " and 8 or 12, 1, 0)
-		letter.BackgroundTransparency = 1
-		letter.Font = Enum.Font.Code
-		letter.TextColor3 = Color3.fromRGB(255, 255, 255)
-		letter.TextSize = 16
-		letter.Parent = container
-
-		local gradient = Instance.new("UIGradient")
-		gradient.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
-		})
-		gradient.Rotation = 45
-		gradient.Parent = letter
-
-		table.insert(letters, {Label = letter, Gradient = gradient, Index = i})
-	end
-
-	RunService.RenderStepped:Connect(function()
-		local timeNow = tick()
-		for _, data in ipairs(letters) do
-			data.Label.Position = UDim2.new(0, 0, 0, math.sin(timeNow * 4 + data.Index * 0.5) * 3)
-			data.Gradient.Offset = Vector2.new(math.sin(timeNow * 2 + data.Index * 0.2), 0)
-		end
-	end)
-end
+local TWEEN_SMOOTH = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
 function Library:CreateWindow(options)
-	local WindowConfig = {}
 	options = options or {}
 	local titleText = options.Title or "Flipper's Spawner"
-	local loadIconId = options.Icon or "rbxassetid://3926305904"
-
+	
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "OldSchoolLib"
 	ScreenGui.ResetOnSpawn = false
 	pcall(function() ScreenGui.Parent = CoreGui end)
 	if not ScreenGui.Parent then ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-	-- Главный фрейм
+	-- Свернутый текст (появляется при сворачивании)
+	local MinimizedText = Instance.new("TextButton")
+	MinimizedText.Size = UDim2.new(0, 200, 0, 30)
+	MinimizedText.Position = UDim2.new(0.5, -100, 0, 10)
+	MinimizedText.BackgroundTransparency = 1
+	MinimizedText.Font = Enum.Font.Code
+	MinimizedText.Text = titleText
+	MinimizedText.TextColor3 = Color3.fromRGB(255, 170, 0)
+	MinimizedText.TextSize = 18
+	MinimizedText.Visible = false
+	MinimizedText.Parent = ScreenGui
+
 	local MainFrame = Instance.new("Frame")
-	MainFrame.Size = UDim2.new(0, 100, 0, 100)
-	MainFrame.Position = UDim2.new(0.5, -50, 0.5, -50)
+	MainFrame.Size = UDim2.new(0, 750, 0, 450)
+	MainFrame.Position = UDim2.new(0.5, -375, 0.5, -225)
 	MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	MainFrame.BorderSizePixel = 0
-	MainFrame.ClipsDescendants = true -- ФИКС: Скрывает вылеты при скруглении и сворачивании
+	MainFrame.ClipsDescendants = true
 	MainFrame.Parent = ScreenGui
-	
-	local MainCorner = Instance.new("UICorner")
-	MainCorner.CornerRadius = UDim.new(0, 8)
-	MainCorner.Parent = MainFrame
+	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 
-	-- Иконка загрузки (по центру)
-	local LoadingIcon = Instance.new("ImageLabel")
-	LoadingIcon.Size = UDim2.new(0, 40, 0, 40)
-	LoadingIcon.Position = UDim2.new(0.5, -20, 0.5, -20)
-	LoadingIcon.BackgroundTransparency = 1
-	LoadingIcon.Image = loadIconId
-	LoadingIcon.ImageRectOffset = Vector2.new(964, 324)
-	LoadingIcon.ImageRectSize = Vector2.new(36, 36)
-	LoadingIcon.ImageColor3 = Color3.fromRGB(255, 170, 0)
-	LoadingIcon.Parent = MainFrame
+	-- Логика сворачивания
+	MinimizedText.MouseButton1Click:Connect(function()
+		MinimizedText.Visible = false
+		MainFrame.Visible = true
+		MainFrame.Size = UDim2.new(0, 750, 0, 0)
+		TweenService:Create(MainFrame, TWEEN_SMOOTH, {Size = UDim2.new(0, 750, 0, 450)}):Play()
+	end)
 
-	local spin = TweenService:Create(LoadingIcon, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
-	spin:Play()
-	task.wait(1)
-
-	spin:Cancel()
-	TweenService:Create(LoadingIcon, TWEEN_FAST, {ImageTransparency = 1, Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
-	task.wait(0.2)
-
-	local expandTween = TweenService:Create(MainFrame, TWEEN_SMOOTH, {
-		Size = UDim2.new(0, 750, 0, 450),
-		Position = UDim2.new(0.5, -375, 0.5, -225)
-	})
-	expandTween:Play()
-	expandTween.Completed:Wait()
-
-	-- Хедер
 	local Header = Instance.new("Frame")
 	Header.Size = UDim2.new(1, 0, 0, 40)
 	Header.BackgroundTransparency = 1
 	Header.Active = true
 	Header.Parent = MainFrame
 
-	-- ФИКС: Иконка в хедере
-	local HeaderIcon = Instance.new("ImageLabel")
-	HeaderIcon.Size = UDim2.new(0, 20, 0, 20)
-	HeaderIcon.Position = UDim2.new(0, 10, 0.5, -10)
-	HeaderIcon.BackgroundTransparency = 1
-	HeaderIcon.Image = loadIconId
-	HeaderIcon.ImageRectOffset = Vector2.new(964, 324)
-	HeaderIcon.ImageRectSize = Vector2.new(36, 36)
-	HeaderIcon.ImageColor3 = Color3.fromRGB(255, 170, 0)
-	HeaderIcon.Parent = Header
+	local Title = Instance.new("TextLabel")
+	Title.Size = UDim2.new(0, 300, 1, 0)
+	Title.Position = UDim2.new(0, 15, 0, 0)
+	Title.BackgroundTransparency = 1
+	Title.Text = titleText
+	Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Title.Font = Enum.Font.Code
+	Title.TextSize = 16
+	Title.TextXAlignment = Enum.TextXAlignment.Left
+	Title.Parent = Header
 
-	local TitleContainer = Instance.new("Frame")
-	TitleContainer.Size = UDim2.new(0, 300, 1, 0)
-	TitleContainer.Position = UDim2.new(0, 40, 0, 0)
-	TitleContainer.BackgroundTransparency = 1
-	TitleContainer.Parent = Header
-	CreateWavyText(TitleContainer, titleText)
-
-	-- ФИКС: DRAGGABLE
+	-- Draggable
 	local dragging, dragInput, dragStart, startPos
 	Header.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			dragStart = input.Position
-			startPos = MainFrame.Position
+			dragging = true; dragStart = input.Position; startPos = MainFrame.Position
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			dragInput = input
-		end
+		if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
 	end)
 	RunService.RenderStepped:Connect(function()
 		if dragging and dragInput then
@@ -155,11 +84,11 @@ function Library:CreateWindow(options)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 	end)
 
-	local Controls = Instance.new("Frame")
+	-- Кнопки хедера
+	local Controls = Instance.new("Frame", Header)
 	Controls.Size = UDim2.new(0, 60, 1, 0)
 	Controls.Position = UDim2.new(1, -60, 0, 0)
 	Controls.BackgroundTransparency = 1
-	Controls.Parent = Header
 
 	local MinBtn = Instance.new("TextButton", Controls)
 	MinBtn.Size = UDim2.new(0, 14, 0, 14)
@@ -175,15 +104,12 @@ function Library:CreateWindow(options)
 	CloseBtn.Text = ""
 	Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
 
-	-- ФИКС: Сворачивание
-	local isMinimized = false
 	MinBtn.MouseButton1Click:Connect(function()
-		isMinimized = not isMinimized
-		if isMinimized then
-			TweenService:Create(MainFrame, TWEEN_FAST, {Size = UDim2.new(0, 750, 0, 40)}):Play()
-		else
-			TweenService:Create(MainFrame, TWEEN_FAST, {Size = UDim2.new(0, 750, 0, 450)}):Play()
-		end
+		local tw = TweenService:Create(MainFrame, TWEEN_FAST, {Size = UDim2.new(0, 750, 0, 0)})
+		tw:Play()
+		tw.Completed:Wait()
+		MainFrame.Visible = false
+		MinimizedText.Visible = true
 	end)
 
 	CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
@@ -199,19 +125,58 @@ function Library:CreateWindow(options)
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))
 	})
 
-	-- Панели
+	-- Вкладки (Иконки слева)
 	local Sidebar = Instance.new("Frame", MainFrame)
-	Sidebar.Size = UDim2.new(0, 130, 1, -42)
+	Sidebar.Size = UDim2.new(0, 50, 1, -42)
 	Sidebar.Position = UDim2.new(0, 0, 0, 42)
 	Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 	Sidebar.BorderSizePixel = 0
-	
-	local SidebarLayout = Instance.new("UIListLayout", Sidebar)
-	SidebarLayout.Padding = UDim.new(0, 5)
 
-	local ContentScroll = Instance.new("ScrollingFrame", MainFrame)
-	ContentScroll.Size = UDim2.new(1, -310, 1, -42)
-	ContentScroll.Position = UDim2.new(0, 130, 0, 42)
+	local SidebarLayout = Instance.new("UIListLayout", Sidebar)
+	SidebarLayout.Padding = UDim.new(0, 10)
+	SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	Instance.new("UIPadding", Sidebar).PaddingTop = UDim.new(0, 10)
+
+	local function CreateIconTab(iconId, isActive)
+		local Btn = Instance.new("TextButton", Sidebar)
+		Btn.Size = UDim2.new(0, 30, 0, 30)
+		Btn.BackgroundTransparency = 1
+		Btn.Text = ""
+		
+		local Icon = Instance.new("ImageLabel", Btn)
+		Icon.Size = UDim2.new(1, 0, 1, 0)
+		Icon.BackgroundTransparency = 1
+		Icon.Image = iconId
+		Icon.ImageColor3 = isActive and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(150, 150, 150)
+		
+		return Btn, Icon
+	end
+
+	-- Иконки: Домик и Шестеренка (используем стандартные roblox asset id)
+	local MainTabBtn, MainIcon = CreateIconTab("rbxassetid://6031094678", true)
+	local SettingsTabBtn, SetIcon = CreateIconTab("rbxassetid://6031075976", false)
+
+	-- Центральная часть (Сетка + Поиск)
+	local CenterArea = Instance.new("Frame", MainFrame)
+	CenterArea.Size = UDim2.new(1, -270, 1, -42) -- 750 - 50(left) - 220(right)
+	CenterArea.Position = UDim2.new(0, 50, 0, 42)
+	CenterArea.BackgroundTransparency = 1
+
+	local SearchBox = Instance.new("TextBox", CenterArea)
+	SearchBox.Size = UDim2.new(1, -20, 0, 30)
+	SearchBox.Position = UDim2.new(0, 10, 0, 10)
+	SearchBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	SearchBox.Font = Enum.Font.Code
+	SearchBox.TextSize = 14
+	SearchBox.PlaceholderText = " Search pets..."
+	SearchBox.Text = ""
+	SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+	Instance.new("UICorner", SearchBox).CornerRadius = UDim.new(0, 6)
+
+	local ContentScroll = Instance.new("ScrollingFrame", CenterArea)
+	ContentScroll.Size = UDim2.new(1, 0, 1, -50)
+	ContentScroll.Position = UDim2.new(0, 0, 0, 50)
 	ContentScroll.BackgroundTransparency = 1
 	ContentScroll.ScrollBarThickness = 2
 	ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 170, 0)
@@ -219,69 +184,128 @@ function Library:CreateWindow(options)
 	ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 
 	local GridLayout = Instance.new("UIGridLayout", ContentScroll)
-	GridLayout.CellSize = UDim2.new(0, 95, 0, 115)
+	GridLayout.CellSize = UDim2.new(0, 100, 0, 120)
 	GridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
 	GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 	local UIPadding = Instance.new("UIPadding", ContentScroll)
-	UIPadding.PaddingTop = UDim.new(0, 15)
-	UIPadding.PaddingLeft = UDim.new(0, 15)
+	UIPadding.PaddingTop = UDim.new(0, 5)
+	UIPadding.PaddingLeft = UDim.new(0, 10)
 
+	-- Правая панель (Properties)
 	local PropertiesPanel = Instance.new("Frame", MainFrame)
-	PropertiesPanel.Size = UDim2.new(0, 180, 1, -42)
-	PropertiesPanel.Position = UDim2.new(1, -180, 0, 42)
+	PropertiesPanel.Size = UDim2.new(0, 220, 1, -42)
+	PropertiesPanel.Position = UDim2.new(1, -220, 0, 42)
 	PropertiesPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 	PropertiesPanel.BorderSizePixel = 0
 
 	local PropTitle = Instance.new("TextLabel", PropertiesPanel)
 	PropTitle.Size = UDim2.new(1, 0, 0, 30)
-	PropTitle.Position = UDim2.new(0, 10, 0, 0)
+	PropTitle.Position = UDim2.new(0, 15, 0, 5)
 	PropTitle.BackgroundTransparency = 1
 	PropTitle.Text = "/properties"
 	PropTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
 	PropTitle.Font = Enum.Font.Code
 	PropTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- ФИКС: Вкладки
-	local function CreateTab(name, isActive)
-		local TabBtn = Instance.new("TextButton", Sidebar)
-		TabBtn.Size = UDim2.new(1, 0, 0, 35)
-		TabBtn.BackgroundTransparency = isActive and 0 or 1
-		TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-		TabBtn.Text = "  " .. name
-		TabBtn.TextColor3 = isActive and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(150, 150, 150)
-		TabBtn.Font = Enum.Font.Code
-		TabBtn.TextXAlignment = Enum.TextXAlignment.Left
-		
-		-- Индикатор активной вкладки
-		local Indicator = Instance.new("Frame", TabBtn)
-		Indicator.Size = UDim2.new(0, 3, 1, 0)
-		Indicator.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-		Indicator.BorderSizePixel = 0
-		Indicator.Visible = isActive
-		
-		return TabBtn, Indicator
+	-- Состояние для бекенда
+	local AppState = {
+		SelectedPetId = nil,
+		M = false, N = false, F = false, R = false,
+		RPName = "", Age = "6", Friendship = "0"
+	}
+
+	-- Кнопки зелий
+	local PotionsFrame = Instance.new("Frame", PropertiesPanel)
+	PotionsFrame.Size = UDim2.new(1, -30, 0, 30)
+	PotionsFrame.Position = UDim2.new(0, 15, 0, 45)
+	PotionsFrame.BackgroundTransparency = 1
+
+	local PotionLayout = Instance.new("UIListLayout", PotionsFrame)
+	PotionLayout.FillDirection = Enum.FillDirection.Horizontal
+	PotionLayout.Padding = UDim.new(0, 5)
+
+	local function CreatePotionBtn(name, key)
+		local Btn = Instance.new("TextButton", PotionsFrame)
+		Btn.Size = UDim2.new(0, 40, 1, 0)
+		Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+		Btn.Text = name
+		Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+		Btn.Font = Enum.Font.Code
+		Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+
+		Btn.MouseButton1Click:Connect(function()
+			AppState[key] = not AppState[key]
+			Btn.BackgroundColor3 = AppState[key] and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(35, 35, 40)
+			Btn.TextColor3 = AppState[key] and Color3.fromRGB(25, 25, 30) or Color3.fromRGB(150, 150, 150)
+		end)
 	end
+	CreatePotionBtn("M", "M"); CreatePotionBtn("N", "N"); CreatePotionBtn("F", "F"); CreatePotionBtn("R", "R")
 
-	local MainTabBtn, MainInd = CreateTab("Main", true)
-	local SettingsTabBtn, SetInd = CreateTab("Settings", false)
+	-- Инпуты
+	local function CreateInput(name, key, default, yPos)
+		local Lbl = Instance.new("TextLabel", PropertiesPanel)
+		Lbl.Size = UDim2.new(0, 60, 0, 20)
+		Lbl.Position = UDim2.new(0, 15, 0, yPos)
+		Lbl.BackgroundTransparency = 1
+		Lbl.Text = name
+		Lbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+		Lbl.Font = Enum.Font.Code
+		Lbl.TextSize = 12
+		Lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-	MainTabBtn.MouseButton1Click:Connect(function()
-		MainTabBtn.BackgroundTransparency = 0; MainTabBtn.TextColor3 = Color3.fromRGB(255, 170, 0); MainInd.Visible = true
-		SettingsTabBtn.BackgroundTransparency = 1; SettingsTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150); SetInd.Visible = false
-		ContentScroll.Visible = true
+		local Box = Instance.new("TextBox", PropertiesPanel)
+		Box.Size = UDim2.new(1, -100, 0, 25)
+		Box.Position = UDim2.new(0, 85, 0, yPos - 2)
+		Box.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+		Box.TextColor3 = Color3.fromRGB(255, 255, 255)
+		Box.Font = Enum.Font.Code
+		Box.TextSize = 12
+		Box.Text = default
+		Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 4)
+
+		Box:GetPropertyChangedSignal("Text"):Connect(function() AppState[key] = Box.Text end)
+	end
+	CreateInput("Name:", "RPName", "", 90)
+	CreateInput("Age(1-6):", "Age", "6", 125)
+	CreateInput("Friend:", "Friendship", "0", 160)
+
+	-- Кнопка Спавна
+	local SpawnBtn = Instance.new("TextButton", PropertiesPanel)
+	SpawnBtn.Size = UDim2.new(1, -30, 0, 35)
+	SpawnBtn.Position = UDim2.new(0, 15, 1, -50)
+	SpawnBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+	SpawnBtn.Text = "Spawn Pet"
+	SpawnBtn.Font = Enum.Font.Code
+	SpawnBtn.TextSize = 14
+	SpawnBtn.TextColor3 = Color3.fromRGB(25, 25, 30)
+	Instance.new("UICorner", SpawnBtn).CornerRadius = UDim.new(0, 6)
+
+	-- Внешнее API библиотеки
+	local GUI_Obj = {
+		Cards = {},
+		OnSpawnClick = nil
+	}
+
+	SpawnBtn.MouseButton1Click:Connect(function()
+		if GUI_Obj.OnSpawnClick and AppState.SelectedPetId then
+			GUI_Obj.OnSpawnClick(AppState.SelectedPetId, AppState)
+		end
 	end)
 
-	SettingsTabBtn.MouseButton1Click:Connect(function()
-		SettingsTabBtn.BackgroundTransparency = 0; SettingsTabBtn.TextColor3 = Color3.fromRGB(255, 170, 0); SetInd.Visible = true
-		MainTabBtn.BackgroundTransparency = 1; MainTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150); MainInd.Visible = false
-		ContentScroll.Visible = false
+	SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+		local q = string.lower(SearchBox.Text)
+		for _, cardData in ipairs(GUI_Obj.Cards) do
+			if q == "" or string.find(string.lower(cardData.Name), q) then
+				cardData.UI.Visible = true
+			else
+				cardData.UI.Visible = false
+			end
+		end
 	end)
 
-	-- Создание карточки
-	function WindowConfig:CreateItem(name, imageId)
+	function GUI_Obj:CreateItem(id, name, imageId)
 		local Card = Instance.new("TextButton")
-		Card.Name = name
 		Card.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 		Card.Text = ""
 		Card.AutoButtonColor = false
@@ -317,19 +341,20 @@ function Library:CreateWindow(options)
 		PetName.TextSize = 12
 		PetName.TextTruncate = Enum.TextTruncate.AtEnd
 
-		Card.MouseEnter:Connect(function()
-			TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.05}):Play()
-			Card.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-		end)
-		Card.MouseLeave:Connect(function()
-			TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.0}):Play()
-			Card.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+		Card.MouseEnter:Connect(function() TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.05}):Play() end)
+		Card.MouseLeave:Connect(function() TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.0}):Play() end)
+
+		Card.MouseButton1Click:Connect(function()
+			AppState.SelectedPetId = id
+			for _, c in ipairs(GUI_Obj.Cards) do c.UI.BackgroundColor3 = Color3.fromRGB(35, 35, 40) end
+			Card.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+			PropTitle.Text = name
 		end)
 
-		return Card
+		table.insert(self.Cards, {UI = Card, Name = name, ID = id})
 	end
 
-	return WindowConfig
+	return GUI_Obj
 end
 
 return Library
