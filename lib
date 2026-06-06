@@ -6,11 +6,56 @@ local CoreGui = game:GetService("CoreGui")
 local Library = {}
 
 local TWEEN_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local TWEEN_SMOOTH = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local TWEEN_SMOOTH = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+
+-- Переливающийся текст
+local function CreateWavyText(parent, textStr)
+	local container = Instance.new("Frame", parent)
+	container.Size = UDim2.new(1, 0, 1, 0)
+	container.BackgroundTransparency = 1
+
+	local layout = Instance.new("UIListLayout", container)
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	local letters = {}
+	for i = 1, #textStr do
+		local char = textStr:sub(i, i)
+		local lbl = Instance.new("TextLabel", container)
+		lbl.BackgroundTransparency = 1
+		lbl.Text = char
+		lbl.Font = Enum.Font.Code
+		lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+		lbl.TextSize = 16
+		lbl.Size = UDim2.new(0, char == " " and 6 or 12, 1, 0)
+		lbl.LayoutOrder = i
+
+		local grad = Instance.new("UIGradient", lbl)
+		grad.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+		})
+		grad.Rotation = 45
+		
+		if char ~= " " then
+			table.insert(letters, {lbl = lbl, grad = grad, idx = i})
+		end
+	end
+
+	RunService.RenderStepped:Connect(function()
+		local t = tick()
+		for _, data in ipairs(letters) do
+			data.lbl.Position = UDim2.new(0, 0, 0, math.sin(t * 4 + data.idx * 0.5) * 3)
+			data.grad.Offset = Vector2.new(math.sin(t * 2 + data.idx * 0.2), 0)
+		end
+	end)
+end
 
 function Library:CreateWindow(options)
 	options = options or {}
-	local titleText = options.Title or "Flipper's Spawner"
+	local titleText = options.Title or "Flipper's Spawner [v1]"
 	
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "OldSchoolLib"
@@ -18,51 +63,85 @@ function Library:CreateWindow(options)
 	pcall(function() ScreenGui.Parent = CoreGui end)
 	if not ScreenGui.Parent then ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-	-- Свернутый текст (появляется при сворачивании)
-	local MinimizedText = Instance.new("TextButton")
-	MinimizedText.Size = UDim2.new(0, 200, 0, 30)
-	MinimizedText.Position = UDim2.new(0.5, -100, 0, 10)
-	MinimizedText.BackgroundTransparency = 1
-	MinimizedText.Font = Enum.Font.Code
-	MinimizedText.Text = titleText
-	MinimizedText.TextColor3 = Color3.fromRGB(255, 170, 0)
-	MinimizedText.TextSize = 18
-	MinimizedText.Visible = false
-	MinimizedText.Parent = ScreenGui
+	-- Свернутый режим (TextLabel + Кнопка)
+	local MinimizedArea = Instance.new("Frame", ScreenGui)
+	MinimizedArea.Size = UDim2.new(0, 300, 0, 30)
+	MinimizedArea.Position = UDim2.new(0.5, -150, 0, 10)
+	MinimizedArea.BackgroundTransparency = 1
+	MinimizedArea.Visible = false
 
-	local MainFrame = Instance.new("Frame")
-	MainFrame.Size = UDim2.new(0, 750, 0, 450)
-	MainFrame.Position = UDim2.new(0.5, -375, 0.5, -225)
+	local MinText = Instance.new("TextLabel", MinimizedArea)
+	MinText.Size = UDim2.new(1, -40, 1, 0)
+	MinText.BackgroundTransparency = 1
+	MinText.Font = Enum.Font.Code
+	MinText.Text = titleText
+	MinText.TextColor3 = Color3.fromRGB(255, 170, 0)
+	MinText.TextSize = 16
+	MinText.TextXAlignment = Enum.TextXAlignment.Center
+
+	local OpenBtn = Instance.new("TextButton", MinimizedArea)
+	OpenBtn.Size = UDim2.new(0, 30, 0, 30)
+	OpenBtn.Position = UDim2.new(1, -30, 0, 0)
+	OpenBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	OpenBtn.Text = "+"
+	OpenBtn.TextColor3 = Color3.fromRGB(255, 170, 0)
+	OpenBtn.Font = Enum.Font.Code
+	OpenBtn.TextSize = 18
+	Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 6)
+
+	-- Главное меню
+	local MainFrame = Instance.new("Frame", ScreenGui)
+	MainFrame.Size = UDim2.new(0, 60, 0, 60)
+	MainFrame.Position = UDim2.new(0.5, -30, 0.5, -30)
 	MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	MainFrame.BorderSizePixel = 0
 	MainFrame.ClipsDescendants = true
-	MainFrame.Parent = ScreenGui
 	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 
-	-- Логика сворачивания
-	MinimizedText.MouseButton1Click:Connect(function()
-		MinimizedText.Visible = false
+	-- Анимация загрузки
+	local LoadIcon = Instance.new("ImageLabel", MainFrame)
+	LoadIcon.Size = UDim2.new(0, 40, 0, 40)
+	LoadIcon.Position = UDim2.new(0.5, -20, 0.5, -20)
+	LoadIcon.BackgroundTransparency = 1
+	LoadIcon.Image = "rbxassetid://3926305904"
+	LoadIcon.ImageRectOffset = Vector2.new(964, 324)
+	LoadIcon.ImageRectSize = Vector2.new(36, 36)
+	LoadIcon.ImageColor3 = Color3.fromRGB(255, 170, 0)
+
+	local spin = TweenService:Create(LoadIcon, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
+	spin:Play()
+	task.wait(1.2)
+	spin:Cancel()
+	TweenService:Create(LoadIcon, TWEEN_FAST, {ImageTransparency = 1, Size = UDim2.new(0,0,0,0), Position = UDim2.new(0.5,0,0.5,0)}):Play()
+	task.wait(0.2)
+
+	-- Раскрытие
+	local expandTw = TweenService:Create(MainFrame, TWEEN_SMOOTH, {
+		Size = UDim2.new(0, 750, 0, 450),
+		Position = UDim2.new(0.5, -375, 0.5, -225)
+	})
+	expandTw:Play()
+	expandTw.Completed:Wait()
+
+	-- Логика разворачивания
+	OpenBtn.MouseButton1Click:Connect(function()
+		MinimizedArea.Visible = false
 		MainFrame.Visible = true
 		MainFrame.Size = UDim2.new(0, 750, 0, 0)
 		TweenService:Create(MainFrame, TWEEN_SMOOTH, {Size = UDim2.new(0, 750, 0, 450)}):Play()
 	end)
 
-	local Header = Instance.new("Frame")
+	-- Хедер
+	local Header = Instance.new("Frame", MainFrame)
 	Header.Size = UDim2.new(1, 0, 0, 40)
 	Header.BackgroundTransparency = 1
 	Header.Active = true
-	Header.Parent = MainFrame
 
-	local Title = Instance.new("TextLabel")
-	Title.Size = UDim2.new(0, 300, 1, 0)
-	Title.Position = UDim2.new(0, 15, 0, 0)
-	Title.BackgroundTransparency = 1
-	Title.Text = titleText
-	Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	Title.Font = Enum.Font.Code
-	Title.TextSize = 16
-	Title.TextXAlignment = Enum.TextXAlignment.Left
-	Title.Parent = Header
+	local TitleContainer = Instance.new("Frame", Header)
+	TitleContainer.Size = UDim2.new(0, 300, 1, 0)
+	TitleContainer.Position = UDim2.new(0, 15, 0, 0)
+	TitleContainer.BackgroundTransparency = 1
+	CreateWavyText(TitleContainer, titleText)
 
 	-- Draggable
 	local dragging, dragInput, dragStart, startPos
@@ -84,7 +163,6 @@ function Library:CreateWindow(options)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 	end)
 
-	-- Кнопки хедера
 	local Controls = Instance.new("Frame", Header)
 	Controls.Size = UDim2.new(0, 60, 1, 0)
 	Controls.Position = UDim2.new(1, -60, 0, 0)
@@ -109,7 +187,7 @@ function Library:CreateWindow(options)
 		tw:Play()
 		tw.Completed:Wait()
 		MainFrame.Visible = false
-		MinimizedText.Visible = true
+		MinimizedArea.Visible = true
 	end)
 
 	CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
@@ -125,7 +203,7 @@ function Library:CreateWindow(options)
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))
 	})
 
-	-- Вкладки (Иконки слева)
+	-- Вкладки (Слева)
 	local Sidebar = Instance.new("Frame", MainFrame)
 	Sidebar.Size = UDim2.new(0, 50, 1, -42)
 	Sidebar.Position = UDim2.new(0, 0, 0, 42)
@@ -133,13 +211,13 @@ function Library:CreateWindow(options)
 	Sidebar.BorderSizePixel = 0
 
 	local SidebarLayout = Instance.new("UIListLayout", Sidebar)
-	SidebarLayout.Padding = UDim.new(0, 10)
+	SidebarLayout.Padding = UDim.new(0, 15)
 	SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	Instance.new("UIPadding", Sidebar).PaddingTop = UDim.new(0, 10)
+	Instance.new("UIPadding", Sidebar).PaddingTop = UDim.new(0, 15)
 
 	local function CreateIconTab(iconId, isActive)
 		local Btn = Instance.new("TextButton", Sidebar)
-		Btn.Size = UDim2.new(0, 30, 0, 30)
+		Btn.Size = UDim2.new(0, 26, 0, 26)
 		Btn.BackgroundTransparency = 1
 		Btn.Text = ""
 		
@@ -148,18 +226,45 @@ function Library:CreateWindow(options)
 		Icon.BackgroundTransparency = 1
 		Icon.Image = iconId
 		Icon.ImageColor3 = isActive and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(150, 150, 150)
-		
 		return Btn, Icon
 	end
 
-	-- Иконки: Домик и Шестеренка (используем стандартные roblox asset id)
 	local MainTabBtn, MainIcon = CreateIconTab("rbxassetid://6031094678", true)
 	local SettingsTabBtn, SetIcon = CreateIconTab("rbxassetid://6031075976", false)
 
-	-- Центральная часть (Сетка + Поиск)
-	local CenterArea = Instance.new("Frame", MainFrame)
-	CenterArea.Size = UDim2.new(1, -270, 1, -42) -- 750 - 50(left) - 220(right)
-	CenterArea.Position = UDim2.new(0, 50, 0, 42)
+	-- Области контента
+	local MainTabArea = Instance.new("Frame", MainFrame)
+	MainTabArea.Size = UDim2.new(1, -50, 1, -42)
+	MainTabArea.Position = UDim2.new(0, 50, 0, 42)
+	MainTabArea.BackgroundTransparency = 1
+
+	local SettingsTabArea = Instance.new("Frame", MainFrame)
+	SettingsTabArea.Size = UDim2.new(1, -50, 1, -42)
+	SettingsTabArea.Position = UDim2.new(0, 50, 0, 42)
+	SettingsTabArea.BackgroundTransparency = 1
+	SettingsTabArea.Visible = false
+
+	-- Переключение вкладок
+	MainTabBtn.MouseButton1Click:Connect(function()
+		MainIcon.ImageColor3 = Color3.fromRGB(255, 170, 0); SetIcon.ImageColor3 = Color3.fromRGB(150, 150, 150)
+		MainTabArea.Visible = true; SettingsTabArea.Visible = false
+	end)
+	SettingsTabBtn.MouseButton1Click:Connect(function()
+		SetIcon.ImageColor3 = Color3.fromRGB(255, 170, 0); MainIcon.ImageColor3 = Color3.fromRGB(150, 150, 150)
+		SettingsTabArea.Visible = true; MainTabArea.Visible = false
+	end)
+
+	-- Заглушка для Settings
+	local SetText = Instance.new("TextLabel", SettingsTabArea)
+	SetText.Size = UDim2.new(1, 0, 1, 0)
+	SetText.BackgroundTransparency = 1
+	SetText.Text = "Settings (Empty)"
+	SetText.TextColor3 = Color3.fromRGB(150, 150, 150)
+	SetText.Font = Enum.Font.Code
+
+	-- Центральная часть (Main Tab)
+	local CenterArea = Instance.new("Frame", MainTabArea)
+	CenterArea.Size = UDim2.new(1, -220, 1, 0)
 	CenterArea.BackgroundTransparency = 1
 
 	local SearchBox = Instance.new("TextBox", CenterArea)
@@ -187,15 +292,12 @@ function Library:CreateWindow(options)
 	GridLayout.CellSize = UDim2.new(0, 100, 0, 120)
 	GridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
 	GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-	local UIPadding = Instance.new("UIPadding", ContentScroll)
-	UIPadding.PaddingTop = UDim.new(0, 5)
-	UIPadding.PaddingLeft = UDim.new(0, 10)
+	Instance.new("UIPadding", ContentScroll).PaddingTop = UDim.new(0, 5); Instance.new("UIPadding", ContentScroll).PaddingLeft = UDim.new(0, 10)
 
 	-- Правая панель (Properties)
-	local PropertiesPanel = Instance.new("Frame", MainFrame)
-	PropertiesPanel.Size = UDim2.new(0, 220, 1, -42)
-	PropertiesPanel.Position = UDim2.new(1, -220, 0, 42)
+	local PropertiesPanel = Instance.new("Frame", MainTabArea)
+	PropertiesPanel.Size = UDim2.new(0, 220, 1, 0)
+	PropertiesPanel.Position = UDim2.new(1, -220, 0, 0)
 	PropertiesPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 	PropertiesPanel.BorderSizePixel = 0
 
@@ -208,14 +310,8 @@ function Library:CreateWindow(options)
 	PropTitle.Font = Enum.Font.Code
 	PropTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- Состояние для бекенда
-	local AppState = {
-		SelectedPetId = nil,
-		M = false, N = false, F = false, R = false,
-		RPName = "", Age = "6", Friendship = "0"
-	}
+	local AppState = { SelectedPetId = nil, M = false, N = false, F = false, R = false, RPName = "", Age = "6", Friendship = "0" }
 
-	-- Кнопки зелий
 	local PotionsFrame = Instance.new("Frame", PropertiesPanel)
 	PotionsFrame.Size = UDim2.new(1, -30, 0, 30)
 	PotionsFrame.Position = UDim2.new(0, 15, 0, 45)
@@ -224,6 +320,9 @@ function Library:CreateWindow(options)
 	local PotionLayout = Instance.new("UIListLayout", PotionsFrame)
 	PotionLayout.FillDirection = Enum.FillDirection.Horizontal
 	PotionLayout.Padding = UDim.new(0, 5)
+
+	-- Референс на инпут Age, чтобы лочить его при 'M'
+	local AgeInputBox
 
 	local function CreatePotionBtn(name, key)
 		local Btn = Instance.new("TextButton", PotionsFrame)
@@ -238,11 +337,23 @@ function Library:CreateWindow(options)
 			AppState[key] = not AppState[key]
 			Btn.BackgroundColor3 = AppState[key] and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(35, 35, 40)
 			Btn.TextColor3 = AppState[key] and Color3.fromRGB(25, 25, 30) or Color3.fromRGB(150, 150, 150)
+			
+			-- Логика блока Age при M
+			if key == "M" and AgeInputBox then
+				if AppState.M then
+					AgeInputBox.Text = "6"
+					AgeInputBox.TextEditable = false
+					AgeInputBox.TextColor3 = Color3.fromRGB(100, 100, 100)
+					AppState.Age = "6"
+				else
+					AgeInputBox.TextEditable = true
+					AgeInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+				end
+			end
 		end)
 	end
 	CreatePotionBtn("M", "M"); CreatePotionBtn("N", "N"); CreatePotionBtn("F", "F"); CreatePotionBtn("R", "R")
 
-	-- Инпуты
 	local function CreateInput(name, key, default, yPos)
 		local Lbl = Instance.new("TextLabel", PropertiesPanel)
 		Lbl.Size = UDim2.new(0, 60, 0, 20)
@@ -265,12 +376,13 @@ function Library:CreateWindow(options)
 		Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 4)
 
 		Box:GetPropertyChangedSignal("Text"):Connect(function() AppState[key] = Box.Text end)
+		return Box
 	end
+
 	CreateInput("Name:", "RPName", "", 90)
-	CreateInput("Age(1-6):", "Age", "6", 125)
+	AgeInputBox = CreateInput("Age(1-6):", "Age", "6", 125)
 	CreateInput("Friend:", "Friendship", "0", 160)
 
-	-- Кнопка Спавна
 	local SpawnBtn = Instance.new("TextButton", PropertiesPanel)
 	SpawnBtn.Size = UDim2.new(1, -30, 0, 35)
 	SpawnBtn.Position = UDim2.new(0, 15, 1, -50)
@@ -281,11 +393,7 @@ function Library:CreateWindow(options)
 	SpawnBtn.TextColor3 = Color3.fromRGB(25, 25, 30)
 	Instance.new("UICorner", SpawnBtn).CornerRadius = UDim.new(0, 6)
 
-	-- Внешнее API библиотеки
-	local GUI_Obj = {
-		Cards = {},
-		OnSpawnClick = nil
-	}
+	local GUI_Obj = { Cards = {}, OnSpawnClick = nil }
 
 	SpawnBtn.MouseButton1Click:Connect(function()
 		if GUI_Obj.OnSpawnClick and AppState.SelectedPetId then
@@ -296,11 +404,7 @@ function Library:CreateWindow(options)
 	SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
 		local q = string.lower(SearchBox.Text)
 		for _, cardData in ipairs(GUI_Obj.Cards) do
-			if q == "" or string.find(string.lower(cardData.Name), q) then
-				cardData.UI.Visible = true
-			else
-				cardData.UI.Visible = false
-			end
+			cardData.UI.Visible = (q == "" or string.find(string.lower(cardData.Name), q) ~= nil)
 		end
 	end)
 
