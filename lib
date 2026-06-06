@@ -6,9 +6,8 @@ local CoreGui = game:GetService("CoreGui")
 local Library = {}
 
 local TWEEN_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local TWEEN_SMOOTH = TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local TWEEN_SMOOTH = TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
 
--- Переливающийся текст (волна)
 local function CreateWavyText(parent, textStr)
 	local container = Instance.new("Frame", parent)
 	container.Size = UDim2.new(1, 0, 1, 0)
@@ -39,10 +38,7 @@ local function CreateWavyText(parent, textStr)
 			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
 		})
 		grad.Rotation = 45
-		
-		if char ~= " " then
-			table.insert(letters, {lbl = lbl, grad = grad, idx = i})
-		end
+		if char ~= " " then table.insert(letters, {lbl = lbl, grad = grad, idx = i}) end
 	end
 
 	RunService.RenderStepped:Connect(function()
@@ -64,14 +60,14 @@ function Library:CreateWindow(options)
 	pcall(function() ScreenGui.Parent = CoreGui end)
 	if not ScreenGui.Parent then ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-	-- WATERMARK: Метка легитности сверху экрана (TextLabel, без кнопок)
+	-- Метка (Watermark) - чисто TextLabel
 	local WatermarkContainer = Instance.new("Frame", ScreenGui)
 	WatermarkContainer.Size = UDim2.new(0, 300, 0, 30)
 	WatermarkContainer.Position = UDim2.new(0.5, -150, 0, 5)
 	WatermarkContainer.BackgroundTransparency = 1
 	CreateWavyText(WatermarkContainer, titleText)
 
-	-- Отдельная кнопка открытия UI (Сбоку)
+	-- Отдельная кнопка открытия
 	local OpenBtn = Instance.new("TextButton", ScreenGui)
 	OpenBtn.Size = UDim2.new(0, 36, 0, 36)
 	OpenBtn.Position = UDim2.new(1, -50, 0.5, -18)
@@ -82,43 +78,15 @@ function Library:CreateWindow(options)
 	OpenBtn.TextSize = 24
 	OpenBtn.Visible = false
 	Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 8)
-	Instance.new("UIStroke", OpenBtn).Color = Color3.fromRGB(255, 170, 0)
 
-	-- Главное меню
 	local MainFrame = Instance.new("Frame", ScreenGui)
-	MainFrame.Size = UDim2.new(0, 60, 0, 60)
-	MainFrame.Position = UDim2.new(0.5, -30, 0.5, -30)
+	MainFrame.Size = UDim2.new(0, 750, 0, 450)
+	MainFrame.Position = UDim2.new(0.5, -375, 0.5, -225)
 	MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	MainFrame.BorderSizePixel = 0
 	MainFrame.ClipsDescendants = true
 	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 
-	-- Стартовая загрузка
-	local LoadIcon = Instance.new("ImageLabel", MainFrame)
-	LoadIcon.Size = UDim2.new(0, 40, 0, 40)
-	LoadIcon.Position = UDim2.new(0.5, -20, 0.5, -20)
-	LoadIcon.BackgroundTransparency = 1
-	LoadIcon.Image = "rbxassetid://3926305904"
-	LoadIcon.ImageRectOffset = Vector2.new(964, 324)
-	LoadIcon.ImageRectSize = Vector2.new(36, 36)
-	LoadIcon.ImageColor3 = Color3.fromRGB(255, 170, 0)
-
-	local spin = TweenService:Create(LoadIcon, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
-	spin:Play()
-	task.wait(1.2)
-	spin:Cancel()
-	TweenService:Create(LoadIcon, TWEEN_FAST, {ImageTransparency = 1, Size = UDim2.new(0,0,0,0), Position = UDim2.new(0.5,0,0.5,0)}):Play()
-	task.wait(0.2)
-
-	-- Развертывание
-	local expandTw = TweenService:Create(MainFrame, TWEEN_SMOOTH, {
-		Size = UDim2.new(0, 750, 0, 450),
-		Position = UDim2.new(0.5, -375, 0.5, -225)
-	})
-	expandTw:Play()
-	expandTw.Completed:Wait()
-
-	-- Логика разворачивания (Отдельная кнопка)
 	OpenBtn.MouseButton1Click:Connect(function()
 		OpenBtn.Visible = false
 		MainFrame.Visible = true
@@ -126,35 +94,29 @@ function Library:CreateWindow(options)
 		TweenService:Create(MainFrame, TWEEN_SMOOTH, {Size = UDim2.new(0, 750, 0, 450)}):Play()
 	end)
 
-	-- Хедер
 	local Header = Instance.new("Frame", MainFrame)
 	Header.Size = UDim2.new(1, 0, 0, 40)
 	Header.BackgroundTransparency = 1
 	Header.Active = true
 
-	local HeaderTitle = Instance.new("TextLabel", Header)
-	HeaderTitle.Size = UDim2.new(0, 300, 1, 0)
-	HeaderTitle.Position = UDim2.new(0, 15, 0, 0)
-	HeaderTitle.BackgroundTransparency = 1
-	HeaderTitle.Text = titleText
-	HeaderTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-	HeaderTitle.Font = Enum.Font.Code
-	HeaderTitle.TextSize = 14
-	HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
+	local TitleContainer = Instance.new("Frame", Header)
+	TitleContainer.Size = UDim2.new(0, 300, 1, 0)
+	TitleContainer.Position = UDim2.new(0, 15, 0, 0)
+	TitleContainer.BackgroundTransparency = 1
+	local tLbl = Instance.new("TextLabel", TitleContainer)
+	tLbl.Size = UDim2.new(1,0,1,0); tLbl.BackgroundTransparency = 1; tLbl.Text = titleText
+	tLbl.TextColor3 = Color3.fromRGB(200,200,200); tLbl.Font = Enum.Font.Code; tLbl.TextSize = 14; tLbl.TextXAlignment = Enum.TextXAlignment.Left
 
 	-- Draggable
-	local dragging, dragInput, dragStart, startPos
+	local dragging, dragStart, startPos
 	Header.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			dragging = true; dragStart = input.Position; startPos = MainFrame.Position
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-	end)
-	RunService.RenderStepped:Connect(function()
-		if dragging and dragInput then
-			local delta = dragInput.Position - dragStart
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
 			MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 		end
 	end)
@@ -162,70 +124,43 @@ function Library:CreateWindow(options)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 	end)
 
-	-- Кнопки управления окном
 	local Controls = Instance.new("Frame", Header)
 	Controls.Size = UDim2.new(0, 60, 1, 0)
 	Controls.Position = UDim2.new(1, -60, 0, 0)
 	Controls.BackgroundTransparency = 1
 
 	local MinBtn = Instance.new("TextButton", Controls)
-	MinBtn.Size = UDim2.new(0, 14, 0, 14)
-	MinBtn.Position = UDim2.new(0, 0, 0.5, -7)
-	MinBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-	MinBtn.Text = ""
+	MinBtn.Size = UDim2.new(0, 14, 0, 14); MinBtn.Position = UDim2.new(0, 0, 0.5, -7); MinBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0); MinBtn.Text = ""
 	Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
 
 	local CloseBtn = Instance.new("TextButton", Controls)
-	CloseBtn.Size = UDim2.new(0, 14, 0, 14)
-	CloseBtn.Position = UDim2.new(0, 22, 0.5, -7)
-	CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-	CloseBtn.Text = ""
+	CloseBtn.Size = UDim2.new(0, 14, 0, 14); CloseBtn.Position = UDim2.new(0, 22, 0.5, -7); CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60); CloseBtn.Text = ""
 	Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
 
 	MinBtn.MouseButton1Click:Connect(function()
 		local tw = TweenService:Create(MainFrame, TWEEN_FAST, {Size = UDim2.new(0, 750, 0, 0)})
-		tw:Play()
-		tw.Completed:Wait()
-		MainFrame.Visible = false
-		OpenBtn.Visible = true
+		tw:Play(); tw.Completed:Wait()
+		MainFrame.Visible = false; OpenBtn.Visible = true
 	end)
-
 	CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
 	local Separator = Instance.new("Frame", Header)
-	Separator.Size = UDim2.new(1, 0, 0, 2)
-	Separator.Position = UDim2.new(0, 0, 1, 0)
-	Separator.BorderSizePixel = 0
+	Separator.Size = UDim2.new(1, 0, 0, 2); Separator.Position = UDim2.new(0, 0, 1, 0); Separator.BorderSizePixel = 0
 	local SepGradient = Instance.new("UIGradient", Separator)
-	SepGradient.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 0)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))
-	})
+	SepGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 170, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))})
 
-	-- Вкладки (Слева)
+	-- Вкладки
 	local Sidebar = Instance.new("Frame", MainFrame)
-	Sidebar.Size = UDim2.new(0, 50, 1, -42)
-	Sidebar.Position = UDim2.new(0, 0, 0, 42)
-	Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-	Sidebar.BorderSizePixel = 0
-
+	Sidebar.Size = UDim2.new(0, 50, 1, -42); Sidebar.Position = UDim2.new(0, 0, 0, 42); Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 24); Sidebar.BorderSizePixel = 0
 	local SidebarLayout = Instance.new("UIListLayout", Sidebar)
-	SidebarLayout.Padding = UDim.new(0, 15)
-	SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	SidebarLayout.Padding = UDim.new(0, 15); SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	Instance.new("UIPadding", Sidebar).PaddingTop = UDim.new(0, 15)
 
 	local function CreateIconTab(iconId, isActive)
 		local Btn = Instance.new("TextButton", Sidebar)
-		Btn.Size = UDim2.new(0, 26, 0, 26)
-		Btn.BackgroundTransparency = 1
-		Btn.Text = ""
-		
+		Btn.Size = UDim2.new(0, 26, 0, 26); Btn.BackgroundTransparency = 1; Btn.Text = ""
 		local Icon = Instance.new("ImageLabel", Btn)
-		Icon.Size = UDim2.new(1, 0, 1, 0)
-		Icon.BackgroundTransparency = 1
-		Icon.Image = iconId
-		Icon.ImageColor3 = isActive and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(150, 150, 150)
+		Icon.Size = UDim2.new(1, 0, 1, 0); Icon.BackgroundTransparency = 1; Icon.Image = iconId; Icon.ImageColor3 = isActive and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(150, 150, 150)
 		return Btn, Icon
 	end
 
@@ -233,15 +168,10 @@ function Library:CreateWindow(options)
 	local SettingsTabBtn, SetIcon = CreateIconTab("rbxassetid://6031075976", false)
 
 	local MainTabArea = Instance.new("Frame", MainFrame)
-	MainTabArea.Size = UDim2.new(1, -50, 1, -42)
-	MainTabArea.Position = UDim2.new(0, 50, 0, 42)
-	MainTabArea.BackgroundTransparency = 1
+	MainTabArea.Size = UDim2.new(1, -50, 1, -42); MainTabArea.Position = UDim2.new(0, 50, 0, 42); MainTabArea.BackgroundTransparency = 1
 
 	local SettingsTabArea = Instance.new("Frame", MainFrame)
-	SettingsTabArea.Size = UDim2.new(1, -50, 1, -42)
-	SettingsTabArea.Position = UDim2.new(0, 50, 0, 42)
-	SettingsTabArea.BackgroundTransparency = 1
-	SettingsTabArea.Visible = false
+	SettingsTabArea.Size = UDim2.new(1, -50, 1, -42); SettingsTabArea.Position = UDim2.new(0, 50, 0, 42); SettingsTabArea.BackgroundTransparency = 1; SettingsTabArea.Visible = false
 
 	MainTabBtn.MouseButton1Click:Connect(function()
 		MainIcon.ImageColor3 = Color3.fromRGB(255, 170, 0); SetIcon.ImageColor3 = Color3.fromRGB(150, 150, 150)
@@ -253,95 +183,89 @@ function Library:CreateWindow(options)
 	end)
 
 	local SetText = Instance.new("TextLabel", SettingsTabArea)
-	SetText.Size = UDim2.new(1, 0, 1, 0)
-	SetText.BackgroundTransparency = 1
-	SetText.Text = "Settings (Empty)"
-	SetText.TextColor3 = Color3.fromRGB(150, 150, 150)
-	SetText.Font = Enum.Font.Code
+	SetText.Size = UDim2.new(1, 0, 1, 0); SetText.BackgroundTransparency = 1; SetText.Text = "Settings (Empty)"; SetText.TextColor3 = Color3.fromRGB(150, 150, 150); SetText.Font = Enum.Font.Code
 
-	-- Центральная часть
 	local CenterArea = Instance.new("Frame", MainTabArea)
-	CenterArea.Size = UDim2.new(1, -220, 1, 0)
-	CenterArea.BackgroundTransparency = 1
+	CenterArea.Size = UDim2.new(1, -220, 1, 0); CenterArea.BackgroundTransparency = 1
 
 	local SearchBox = Instance.new("TextBox", CenterArea)
-	SearchBox.Size = UDim2.new(1, -20, 0, 30)
-	SearchBox.Position = UDim2.new(0, 10, 0, 10)
-	SearchBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-	SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-	SearchBox.Font = Enum.Font.Code
-	SearchBox.TextSize = 14
-	SearchBox.PlaceholderText = " Search pets..."
-	SearchBox.Text = ""
-	SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+	SearchBox.Size = UDim2.new(1, -20, 0, 30); SearchBox.Position = UDim2.new(0, 10, 0, 10); SearchBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40); SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255); SearchBox.Font = Enum.Font.Code; SearchBox.TextSize = 14; SearchBox.PlaceholderText = " Search pets..."; SearchBox.Text = ""; SearchBox.TextXAlignment = Enum.TextXAlignment.Left
 	Instance.new("UICorner", SearchBox).CornerRadius = UDim.new(0, 6)
 
 	local ContentScroll = Instance.new("ScrollingFrame", CenterArea)
-	ContentScroll.Size = UDim2.new(1, 0, 1, -50)
-	ContentScroll.Position = UDim2.new(0, 0, 0, 50)
-	ContentScroll.BackgroundTransparency = 1
-	ContentScroll.ScrollBarThickness = 2
-	ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 170, 0)
-	ContentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	ContentScroll.Size = UDim2.new(1, 0, 1, -50); ContentScroll.Position = UDim2.new(0, 0, 0, 50); ContentScroll.BackgroundTransparency = 1; ContentScroll.ScrollBarThickness = 2; ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 170, 0); ContentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 
 	local GridLayout = Instance.new("UIGridLayout", ContentScroll)
-	GridLayout.CellSize = UDim2.new(0, 100, 0, 120)
-	GridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
-	GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	GridLayout.CellSize = UDim2.new(0, 100, 0, 120); GridLayout.CellPadding = UDim2.new(0, 10, 0, 10); GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	Instance.new("UIPadding", ContentScroll).PaddingTop = UDim.new(0, 5); Instance.new("UIPadding", ContentScroll).PaddingLeft = UDim.new(0, 10)
 
-	-- Правая панель (Properties)
+	-- Правая панель с Превью
 	local PropertiesPanel = Instance.new("Frame", MainTabArea)
-	PropertiesPanel.Size = UDim2.new(0, 220, 1, 0)
-	PropertiesPanel.Position = UDim2.new(1, -220, 0, 0)
-	PropertiesPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-	PropertiesPanel.BorderSizePixel = 0
+	PropertiesPanel.Size = UDim2.new(0, 220, 1, 0); PropertiesPanel.Position = UDim2.new(1, -220, 0, 0); PropertiesPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 24); PropertiesPanel.BorderSizePixel = 0
+
+	local PreviewBg = Instance.new("Frame", PropertiesPanel)
+	PreviewBg.Size = UDim2.new(0, 80, 0, 80); PreviewBg.Position = UDim2.new(0.5, -40, 0, 15); PreviewBg.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	Instance.new("UICorner", PreviewBg).CornerRadius = UDim.new(0, 6)
+	local PreviewImg = Instance.new("ImageLabel", PreviewBg)
+	PreviewImg.Size = UDim2.new(0.8, 0, 0.8, 0); PreviewImg.Position = UDim2.new(0.1, 0, 0.1, 0); PreviewImg.BackgroundTransparency = 1; PreviewImg.ScaleType = Enum.ScaleType.Fit
 
 	local PropTitle = Instance.new("TextLabel", PropertiesPanel)
-	PropTitle.Size = UDim2.new(1, 0, 0, 30)
-	PropTitle.Position = UDim2.new(0, 15, 0, 5)
-	PropTitle.BackgroundTransparency = 1
-	PropTitle.Text = "/properties"
-	PropTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
-	PropTitle.Font = Enum.Font.Code
-	PropTitle.TextXAlignment = Enum.TextXAlignment.Left
+	PropTitle.Size = UDim2.new(1, 0, 0, 20); PropTitle.Position = UDim2.new(0, 0, 0, 100); PropTitle.BackgroundTransparency = 1; PropTitle.Text = "Select a Pet"; PropTitle.TextColor3 = Color3.fromRGB(220, 220, 220); PropTitle.Font = Enum.Font.Code; PropTitle.TextSize = 14
+	
+	local PropRarity = Instance.new("TextLabel", PropertiesPanel)
+	PropRarity.Size = UDim2.new(1, 0, 0, 15); PropRarity.Position = UDim2.new(0, 0, 0, 120); PropRarity.BackgroundTransparency = 1; PropRarity.Text = "[Rarity]"; PropRarity.TextColor3 = Color3.fromRGB(150, 150, 150); PropRarity.Font = Enum.Font.Code; PropRarity.TextSize = 12
 
 	local AppState = { SelectedPetId = nil, M = false, N = false, F = false, R = false, RPName = "", Age = "6", Friendship = "0" }
+	local GUI_Obj = { Cards = {}, OnStateChanged = nil, OnSpawnClick = nil }
 
+	-- Кнопки зелий со светящимся градиентом
 	local PotionsFrame = Instance.new("Frame", PropertiesPanel)
-	PotionsFrame.Size = UDim2.new(1, -30, 0, 30)
-	PotionsFrame.Position = UDim2.new(0, 15, 0, 45)
-	PotionsFrame.BackgroundTransparency = 1
+	PotionsFrame.Size = UDim2.new(1, -30, 0, 30); PotionsFrame.Position = UDim2.new(0, 15, 0, 145); PotionsFrame.BackgroundTransparency = 1
 	local PotionLayout = Instance.new("UIListLayout", PotionsFrame)
 	PotionLayout.FillDirection = Enum.FillDirection.Horizontal; PotionLayout.Padding = UDim.new(0, 5)
+
+	local GlowingStrokes = {}
+	RunService.RenderStepped:Connect(function()
+		local t = tick()
+		for grad, _ in pairs(GlowingStrokes) do
+			grad.Rotation = (t * 100) % 360
+		end
+	end)
 
 	local AgeInputBox
 
 	local function CreatePotionBtn(name, key)
 		local Btn = Instance.new("TextButton", PotionsFrame)
-		Btn.Size = UDim2.new(0, 40, 1, 0)
-		Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-		Btn.Text = name
-		Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
-		Btn.Font = Enum.Font.Code
+		Btn.Size = UDim2.new(0, 42, 1, 0); Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 40); Btn.Text = name; Btn.TextColor3 = Color3.fromRGB(150, 150, 150); Btn.Font = Enum.Font.Code
 		Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+
+		local Stroke = Instance.new("UIStroke", Btn)
+		Stroke.Thickness = 1.5; Stroke.Transparency = 1; Stroke.Color = Color3.fromRGB(255, 255, 255)
+		local Grad = Instance.new("UIGradient", Stroke)
+		Grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 200, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))})
 
 		Btn.MouseButton1Click:Connect(function()
 			AppState[key] = not AppState[key]
-			Btn.BackgroundColor3 = AppState[key] and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(35, 35, 40)
-			Btn.TextColor3 = AppState[key] and Color3.fromRGB(25, 25, 30) or Color3.fromRGB(150, 150, 150)
+			
+			if AppState[key] then
+				Stroke.Transparency = 0; GlowingStrokes[Grad] = true
+				Btn.TextColor3 = Color3.fromRGB(255, 170, 0)
+			else
+				Stroke.Transparency = 1; GlowingStrokes[Grad] = nil
+				Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+			end
 			
 			if key == "M" and AgeInputBox then
 				if AppState.M then
-					AgeInputBox.Text = "6"
-					AgeInputBox.TextEditable = false
-					AgeInputBox.TextColor3 = Color3.fromRGB(100, 100, 100)
-					AppState.Age = "6"
+					AgeInputBox.Text = "6"; AgeInputBox.TextEditable = false; AgeInputBox.TextColor3 = Color3.fromRGB(100, 100, 100); AppState.Age = "6"
 				else
-					AgeInputBox.TextEditable = true
-					AgeInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+					AgeInputBox.TextEditable = true; AgeInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 				end
+			end
+
+			-- Вызываем обновление пета
+			if GUI_Obj.OnStateChanged and AppState.SelectedPetId then
+				GUI_Obj.OnStateChanged(AppState.SelectedPetId, AppState)
 			end
 		end)
 	end
@@ -349,44 +273,28 @@ function Library:CreateWindow(options)
 
 	local function CreateInput(name, key, default, yPos)
 		local Lbl = Instance.new("TextLabel", PropertiesPanel)
-		Lbl.Size = UDim2.new(0, 60, 0, 20)
-		Lbl.Position = UDim2.new(0, 15, 0, yPos)
-		Lbl.BackgroundTransparency = 1
-		Lbl.Text = name
-		Lbl.TextColor3 = Color3.fromRGB(150, 150, 150)
-		Lbl.Font = Enum.Font.Code
-		Lbl.TextSize = 12
-		Lbl.TextXAlignment = Enum.TextXAlignment.Left
+		Lbl.Size = UDim2.new(0, 60, 0, 20); Lbl.Position = UDim2.new(0, 15, 0, yPos); Lbl.BackgroundTransparency = 1; Lbl.Text = name; Lbl.TextColor3 = Color3.fromRGB(150, 150, 150); Lbl.Font = Enum.Font.Code; Lbl.TextSize = 12; Lbl.TextXAlignment = Enum.TextXAlignment.Left
 
 		local Box = Instance.new("TextBox", PropertiesPanel)
-		Box.Size = UDim2.new(1, -100, 0, 25)
-		Box.Position = UDim2.new(0, 85, 0, yPos - 2)
-		Box.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-		Box.TextColor3 = Color3.fromRGB(255, 255, 255)
-		Box.Font = Enum.Font.Code
-		Box.TextSize = 12
-		Box.Text = default
+		Box.Size = UDim2.new(1, -100, 0, 25); Box.Position = UDim2.new(0, 85, 0, yPos - 2); Box.BackgroundColor3 = Color3.fromRGB(35, 35, 40); Box.TextColor3 = Color3.fromRGB(255, 255, 255); Box.Font = Enum.Font.Code; Box.TextSize = 12; Box.Text = default
 		Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 4)
 
-		Box:GetPropertyChangedSignal("Text"):Connect(function() AppState[key] = Box.Text end)
+		Box:GetPropertyChangedSignal("Text"):Connect(function() 
+			AppState[key] = Box.Text 
+			if key == "RPName" and GUI_Obj.OnStateChanged and AppState.SelectedPetId then
+				GUI_Obj.OnStateChanged(AppState.SelectedPetId, AppState)
+			end
+		end)
 		return Box
 	end
 
-	CreateInput("Name:", "RPName", "", 90)
-	AgeInputBox = CreateInput("Age(1-6):", "Age", "6", 125)
-	CreateInput("Friend:", "Friendship", "0", 160)
+	CreateInput("Name:", "RPName", "", 185)
+	AgeInputBox = CreateInput("Age(1-6):", "Age", "6", 215)
+	CreateInput("Friend:", "Friendship", "0", 245)
 
 	local SpawnBtn = Instance.new("TextButton", PropertiesPanel)
-	SpawnBtn.Size = UDim2.new(1, -30, 0, 35)
-	SpawnBtn.Position = UDim2.new(0, 15, 1, -50)
-	SpawnBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-	SpawnBtn.Text = "Spawn Pet"
-	SpawnBtn.Font = Enum.Font.Code
-	SpawnBtn.TextSize = 14
-	SpawnBtn.TextColor3 = Color3.fromRGB(25, 25, 30)
+	SpawnBtn.Size = UDim2.new(1, -30, 0, 35); SpawnBtn.Position = UDim2.new(0, 15, 1, -50); SpawnBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0); SpawnBtn.Text = "Spawn Pet"; SpawnBtn.Font = Enum.Font.Code; SpawnBtn.TextSize = 14; SpawnBtn.TextColor3 = Color3.fromRGB(25, 25, 30)
 	Instance.new("UICorner", SpawnBtn).CornerRadius = UDim.new(0, 6)
-
-	local GUI_Obj = { Cards = {}, OnSpawnClick = nil }
 
 	SpawnBtn.MouseButton1Click:Connect(function()
 		if GUI_Obj.OnSpawnClick and AppState.SelectedPetId then
@@ -401,41 +309,22 @@ function Library:CreateWindow(options)
 		end
 	end)
 
-	function GUI_Obj:CreateItem(id, name, imageId)
+	function GUI_Obj:CreateItem(id, name, imageId, rarity)
 		local Card = Instance.new("TextButton")
-		Card.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-		Card.Text = ""
-		Card.AutoButtonColor = false
-		Card.Parent = ContentScroll
+		Card.BackgroundColor3 = Color3.fromRGB(35, 35, 40); Card.Text = ""; Card.AutoButtonColor = false; Card.Parent = ContentScroll
 		Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 6)
 		local UIScale = Instance.new("UIScale", Card)
 
 		local TopLine = Instance.new("Frame", Card)
-		TopLine.Size = UDim2.new(1, 0, 0, 2)
-		TopLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-		TopLine.BorderSizePixel = 0
+		TopLine.Size = UDim2.new(1, 0, 0, 2); TopLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255); TopLine.BorderSizePixel = 0
 		local LineGrad = Instance.new("UIGradient", TopLine)
-		LineGrad.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 170, 0)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 80, 0))
-		})
+		LineGrad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 170, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 80, 0))})
 
-		local PetImage = Instance.new("ImageLabel", Card)
-		PetImage.Size = UDim2.new(0.8, 0, 0.6, 0)
-		PetImage.Position = UDim2.new(0.1, 0, 0.1, 0)
-		PetImage.BackgroundTransparency = 1
-		PetImage.ScaleType = Enum.ScaleType.Fit
-		PetImage.Image = imageId or ""
+		local PetImg = Instance.new("ImageLabel", Card)
+		PetImg.Size = UDim2.new(0.8, 0, 0.6, 0); PetImg.Position = UDim2.new(0.1, 0, 0.1, 0); PetImg.BackgroundTransparency = 1; PetImg.ScaleType = Enum.ScaleType.Fit; PetImg.Image = imageId or ""
 
 		local PetName = Instance.new("TextLabel", Card)
-		PetName.Size = UDim2.new(1, -10, 0, 20)
-		PetName.Position = UDim2.new(0, 5, 1, -25)
-		PetName.BackgroundTransparency = 1
-		PetName.Text = name
-		PetName.TextColor3 = Color3.fromRGB(200, 200, 200)
-		PetName.Font = Enum.Font.Code
-		PetName.TextSize = 12
-		PetName.TextTruncate = Enum.TextTruncate.AtEnd
+		PetName.Size = UDim2.new(1, -10, 0, 20); PetName.Position = UDim2.new(0, 5, 1, -25); PetName.BackgroundTransparency = 1; PetName.Text = name; PetName.TextColor3 = Color3.fromRGB(200, 200, 200); PetName.Font = Enum.Font.Code; PetName.TextSize = 12; PetName.TextTruncate = Enum.TextTruncate.AtEnd
 
 		Card.MouseEnter:Connect(function() TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.05}):Play() end)
 		Card.MouseLeave:Connect(function() TweenService:Create(UIScale, TWEEN_FAST, {Scale = 1.0}):Play() end)
@@ -444,7 +333,18 @@ function Library:CreateWindow(options)
 			AppState.SelectedPetId = id
 			for _, c in ipairs(GUI_Obj.Cards) do c.UI.BackgroundColor3 = Color3.fromRGB(35, 35, 40) end
 			Card.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+			
 			PropTitle.Text = name
+			PropRarity.Text = "[" .. (rarity or "Common") .. "]"
+			PreviewImg.Image = imageId or ""
+
+			local rColor = Color3.fromRGB(150,150,150)
+			local lr = tostring(rarity):lower()
+			if lr == "legendary" then rColor = Color3.fromRGB(255, 215, 0)
+			elseif lr == "ultra_rare" or lr == "ultra-rare" then rColor = Color3.fromRGB(255, 0, 150)
+			elseif lr == "rare" then rColor = Color3.fromRGB(0, 150, 255)
+			elseif lr == "uncommon" then rColor = Color3.fromRGB(0, 255, 100) end
+			PropRarity.TextColor3 = rColor
 		end)
 
 		table.insert(self.Cards, {UI = Card, Name = name, ID = id})
